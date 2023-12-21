@@ -1,10 +1,11 @@
 Main_Logic
 <Main_Logic>:
-    nav_drawer: nav_drawer
     screen_manager: screen_manager
+    meal_plan_screen: meal_plan_screen
+    settings_screen: settings_screen
     ingredients_screen: ingredients_screen
     meals_screen: meals_screen
-    meal_plan_screen: meal_plan_screen
+    nav_drawer: nav_drawer
     MDNavigationLayout:
         size_hint_y:1
         MDScreenManager:
@@ -12,6 +13,7 @@ Main_Logic
             Meal_Plan_Screen:
                 id: meal_plan_screen
             Settings_Screen:
+                id: settings_screen
             Ingredients_Screen:
                 id: ingredients_screen
             Meals_Screen:
@@ -592,29 +594,34 @@ Main_Logic
     tdee: tdee
     MDBoxLayout:
         orientation: "vertical"
-        MDBoxLayout:
-            size_hint: .9,1
-            MDIconButton:
-                icon: "chevron-left"
-                icon_size: dp(50)
-                pos_hint: {"top":1}
-                on_release:
-                    app.root.ids.screen_manager.current = "Meal_Plan_Screen"
-                    app.root.ids.screen_manager.transition.direction = "right"
-                    app.root.load_active_profile()
-            MDIconButton:
-                icon: "swap-horizontal"
-                icon_size: dp(50)
-                pos_hint: {"top":1}
-                on_release:
-                    root.open_settings_search()
-            MDLabel:
-                text: "Settings"
-                pos_hint: {"top":1,"center_x":.5}
-                halign: "center"
-                size_hint_y: None
-                height: self.texture_size[1]
-                font_style: "H3"
+        MDTopAppBar:
+            pos_hint: {"top":1}
+            title: "Settings"
+            font_style: "H1"
+            left_action_items: [["chevron-left", lambda x: root.transition_to_meal_plan_screen()],["swap-horizontal", lambda x: root.open_settings_search()]]
+        # MDBoxLayout:
+        #     size_hint: .9,1
+        #     MDIconButton:
+        #         icon: "chevron-left"
+        #         icon_size: dp(50)
+        #         pos_hint: {"top":1}
+        #         on_release:
+        #             app.root.ids.screen_manager.current = "Meal_Plan_Screen"
+        #             app.root.ids.screen_manager.transition.direction = "right"
+        #             app.root.load_active_profile()
+        #     MDIconButton:
+        #         icon: "swap-horizontal"
+        #         icon_size: dp(50)
+        #         pos_hint: {"top":1}
+        #         on_release:
+        #             root.open_settings_search()
+        #     MDLabel:
+        #         text: "Settings"
+        #         pos_hint: {"top":1,"center_x":.5}
+        #         halign: "center"
+        #         size_hint_y: None
+        #         height: self.texture_size[1]
+        #         font_style: "H3"
         MDScrollView:
             size_hint: .9,7.5
             MDGridLayout:
@@ -860,86 +867,56 @@ Main_Logic
 
 <Ingredients_Screen>:
     name: "Ingredients_Screen"
-    ing_label: ing_label
     search_icon: search_icon
-    back_button: back_button
     ing_search: ing_search
     filter: filter
     layout: layout
     ingredients_display_list: ingredients_display_list
     MDBoxLayout:
-        size_hint_y: None
-        height: ing_label.height
-        pos_hint: {"top":1}
-        MDIconButton:
-            id: back_button
-            icon: "chevron-left"
-            pos_hint: {"center_y":.5}
-            icon_size: dp(50)
-            on_release:
-                app.root.ids.screen_manager.current = "Meal_Plan_Screen"
-                app.root.ids.screen_manager.transition.direction = "right"
-                app.root.load_active_profile()
-        Widget:
-            size_hint_x: .1
-        MDLabel:
-            id: ing_label
-            size_hint_x: 1
-            text: "Ingredients"
-            font_style: "H3"
-        Widget:
-            size_hint_x: .1
-    MDBoxLayout:
-        size_hint_y: None
-        height: search_icon.height
-        pos_hint: {"top":.9}
-        MDIconButton:
-            id: search_icon
-            icon: "magnify"
-            icon_size: dp(50)
-        MDTextField:
-            id: ing_search
-            hint_text: "Name of Ingredient"
-            on_text:
-                root.refresh_display_list()
-        MDIconButtonSpinner:
-            id: filter
-            text: "All"
-            icon: "filter-variant"
-            theme_text_color: "Custom"
-            text_color: (1,1,1,1)
-            icon_size: dp(50)
-            on_release:
-                root.open_filter_dropdown()
-    MDIconButton:
-        icon: "plus"
-        icon_size: dp(50)
-        pos_hint: {"center_x":.5,"bottom":0}
-        on_release:
-            root.open_add_ingredients_dialog()
-    MDBoxLayout:
-        id: layout
         orientation: "vertical"
-        size_hint_y: None
-        height: 0
-        pos_hint: {"top":.95}
-        Widget:
-            size_hint_y: .125
+        MDTopAppBar:
+            pos_hint: {"top":1}
+            title: "Ingredients"
+            font_style: "H3"
+            left_action_items: [["chevron-left", lambda x: root.transition_to_meal_plan_screen()]]
         MDBoxLayout:
+            size_hint_y: None
+            height: search_icon.height
+            pos_hint: {"top":.9}
+            MDIconButton:
+                id: search_icon
+                icon: "magnify"
+                icon_size: dp(50)
+            MDTextField:
+                id: ing_search
+                hint_text: "Name of Ingredient"
+                on_text:
+                    root.refresh_display_list()
+            MDIconButtonSpinner:
+                id: filter
+                text: "All"
+                icon: "filter-variant"
+                theme_text_color: "Custom"
+                text_color: (1,1,1,1)
+                icon_size: dp(50)
+                on_release:
+                    root.open_filter_dropdown()
+        MDBoxLayout:
+            id: layout
             orientation: "vertical"
-            size_hint_y: .675
-            ScrollView:
-                MDList:
-                    id: ingredients_display_list
-        Widget:
-            size_hint_y: .2
-    MDIconButton:
-        icon: "chevron-double-down"
-        icon_size: dp(50)
-        collapsed: True
-        pos_hint: {"center_x":.5,"top":.8}
-        on_release:
-            root.expand_collapse(self)
+            size_hint_y: 1
+            pos_hint: {"top":.95}
+            MDBoxLayout:
+                orientation: "vertical"
+                ScrollView:
+                    MDList:
+                        id: ingredients_display_list
+    MDBottomAppBar:
+        MDTopAppBar:
+            icon: "plus"
+            type: "bottom"
+            mode: "center"
+            on_action_button: root.open_add_ingredients_dialog()
 
 <Add_Ingredient_Dialog>:
     size_hint_y: None
@@ -1011,6 +988,7 @@ Main_Logic
         MDTextField:
             id: add_ing_calories
             size_hint_x:2
+            hint_text: "per 100 grams" if add_ing_unit.icon == "weight-gram" else "per 100 mls" if add_ing_unit.icon == "cup" else "per piece" if add_ing_unit.icon == "puzzle-outline" else ""
             input_filter: "float"
             on_text:
                 root.add_button_check_validity()
@@ -1026,6 +1004,7 @@ Main_Logic
         MDTextField:
             id: add_ing_fats
             size_hint_x:2
+            hint_text: "per 100 grams" if add_ing_unit.icon == "weight-gram" else "per 100 mls" if add_ing_unit.icon == "cup" else "per piece" if add_ing_unit.icon == "puzzle-outline" else ""
             input_filter: "float"
             on_text:
                 root.add_button_check_validity()
@@ -1041,6 +1020,7 @@ Main_Logic
         MDTextField:
             id: add_ing_carbohydrates
             size_hint_x:2
+            hint_text: "per 100 grams" if add_ing_unit.icon == "weight-gram" else "per 100 mls" if add_ing_unit.icon == "cup" else "per piece" if add_ing_unit.icon == "puzzle-outline" else ""
             input_filter: "float"
             on_text:
                 root.add_button_check_validity()
@@ -1056,6 +1036,7 @@ Main_Logic
         MDTextField:
             id: add_ing_proteins
             size_hint_x:2
+            hint_text: "per 100 grams" if add_ing_unit.icon == "weight-gram" else "per 100 mls" if add_ing_unit.icon == "cup" else "per piece" if add_ing_unit.icon == "puzzle-outline" else ""
             input_filter: "float"
             on_text:
                 root.add_button_check_validity()
@@ -1240,6 +1221,7 @@ Main_Logic
         MDTextField:
             id: update_ing_calories
             size_hint_x:2
+            hint_text: "per 100 grams" if update_ing_unit.icon == "weight-gram" else "per 100 mls" if update_ing_unit.icon == "cup" else "per piece" if update_ing_unit.icon == "puzzle-outline" else ""
             input_filter: "float"
             on_text:
                 root.update_button_check_validity()
@@ -1255,6 +1237,7 @@ Main_Logic
         MDTextField:
             id: update_ing_fats
             size_hint_x:2
+            hint_text: "per 100 grams" if update_ing_unit.icon == "weight-gram" else "per 100 mls" if update_ing_unit.icon == "cup" else "per piece" if update_ing_unit.icon == "puzzle-outline" else ""
             input_filter: "float"
             on_text:
                 root.update_button_check_validity()
@@ -1270,6 +1253,7 @@ Main_Logic
         MDTextField:
             id: update_ing_carbohydrates
             size_hint_x:2
+            hint_text: "per 100 grams" if update_ing_unit.icon == "weight-gram" else "per 100 mls" if update_ing_unit.icon == "cup" else "per piece" if update_ing_unit.icon == "puzzle-outline" else ""
             input_filter: "float"
             on_text:
                 root.update_button_check_validity()
@@ -1285,6 +1269,7 @@ Main_Logic
         MDTextField:
             id: update_ing_proteins
             size_hint_x:2
+            hint_text: "per 100 grams" if update_ing_unit.icon == "weight-gram" else "per 100 mls" if update_ing_unit.icon == "cup" else "per piece" if update_ing_unit.icon == "puzzle-outline" else ""
             input_filter: "float"
             on_text:
                 root.update_button_check_validity()
@@ -1333,84 +1318,91 @@ Main_Logic
 
 <Meals_Screen>:
     name: "Meals_Screen"
-    meal_label: meal_label
+    # meal_label: meal_label
+    # back_button: back_button
     search_icon: search_icon
-    back_button: back_button
     meal_search: meal_search
     filter: filter
     layout: layout
     meals_display_list: meals_display_list
     MDBoxLayout:
-        size_hint_y: None
-        height: meal_label.height
-        pos_hint: {"top":1}
-        MDIconButton:
-            id: back_button
-            icon: "chevron-left"
-            pos_hint: {"center_y":.5}
-            icon_size: dp(50)
-            on_release:
-                app.root.ids.screen_manager.current = "Meal_Plan_Screen"
-                app.root.ids.screen_manager.transition.direction = "right"
-                app.root.load_active_profile()
-        Widget:
-            size_hint_x: .1
-        MDLabel:
-            id: meal_label
-            size_hint_x: 1
-            text: "Meals"
-            font_style: "H3"
-        Widget:
-            size_hint_x: .1
-    MDBoxLayout:
-        size_hint_y: None
-        height: search_icon.height
-        pos_hint: {"top":.9}
-        MDIconButton:
-            id: search_icon
-            icon: "magnify"
-            icon_size: dp(50)
-        MDTextField:
-            id: meal_search
-            hint_text: "Name of Meals"
-            on_text:
-                root.refresh_display_list()
-        MDIconButtonSpinner:
-            id: filter
-            text: "All"
-            icon: "filter-variant"
-            icon_size: dp(50)
-            on_release:
-                root.open_filter_dialog()
-    MDIconButton:
-        icon: "plus"
-        icon_size: dp(50)
-        pos_hint: {"center_x":.5,"bottom":0}
-        on_release:
-            root.open_add_meal_dialog()
-    MDBoxLayout:
-        id: layout
         orientation: "vertical"
-        size_hint_y: None
-        height: 0
-        pos_hint: {"top":.95}
-        Widget:
-            size_hint_y: .125
+        MDTopAppBar:
+            pos_hint: {"top":1}
+            title: "Meals"
+            font_style: "H3"
+            left_action_items: [["chevron-left", lambda x: root.transition_to_meal_plan_screen()]]
+    # MDBoxLayout:
+    #     size_hint_y: None
+    #     height: meal_label.height
+    #     pos_hint: {"top":1}
+    #     MDIconButton:
+    #         id: back_button
+    #         icon: "chevron-left"
+    #         pos_hint: {"center_y":.5}
+    #         icon_size: dp(50)
+    #         on_release:
+    #             app.root.ids.screen_manager.current = "Meal_Plan_Screen"
+    #             app.root.ids.screen_manager.transition.direction = "right"
+    #             app.root.load_active_profile()
+    #     Widget:
+    #         size_hint_x: .1
+    #     MDLabel:
+    #         id: meal_label
+    #         size_hint_x: 1
+    #         text: "Meals"
+    #         font_style: "H3"
+    #     Widget:
+    #         size_hint_x: .1
         MDBoxLayout:
+            size_hint_y: None
+            height: search_icon.height
+            pos_hint: {"top":.9}
+            MDIconButton:
+                id: search_icon
+                icon: "magnify"
+                icon_size: dp(50)
+            MDTextField:
+                id: meal_search
+                hint_text: "Name of Meals"
+                on_text:
+                    root.refresh_display_list()
+            MDIconButtonSpinner:
+                id: filter
+                text: "All"
+                icon: "filter-variant"
+                icon_size: dp(50)
+                on_release:
+                    root.open_filter_dialog()
+        MDBoxLayout:
+            id: layout
             orientation: "vertical"
-            size_hint_y: .675
-            ScrollView:
-                MDList:
-                    id: meals_display_list
-        Widget:
-            size_hint_y: .2
-    MDIconButton:
-        icon: "chevron-double-down"
-        icon_size: dp(50)
-        collapsed: True
-        pos_hint: {"center_x":.5,"top":.8}
-        on_release:
-            root.expand_collapse(self)
+            size_hint_y:1
+            pos_hint: {"top":.95}
+            MDBoxLayout:
+                orientation: "vertical"
+                ScrollView:
+                    MDList:
+                        id: meals_display_list
+    MDBottomAppBar:
+        MDTopAppBar:
+            icon: "plus"
+            type: "bottom"
+            mode: "center"
+            on_action_button: root.open_add_meal_dialog()
+    # MDIconButton:
+    #     icon: "plus"
+    #     icon_size: dp(50)
+    #     pos_hint: {"center_x":.5,"bottom":0}
+    #     on_release:
+    #         root.open_add_meal_dialog()
+    # MDIconButton:
+    #     icon: "chevron-double-down"
+    #     icon_size: dp(50)
+    #     collapsed: True
+    #     pos_hint: {"center_x":.5,"top":.8}
+    #     on_release:
+    #         root.expand_collapse(self)
 
 
 <Filter_Dialog>:

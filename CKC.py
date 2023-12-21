@@ -19,6 +19,12 @@ class Custom_MDGridLayout(MDGridLayout):
         self.size_hint_y = None
         self.bind(minimum_height=self.setter('height'))
 
+class MDLabelNumber(MDLabel):
+    number = NumericProperty(0)
+
+    def on_number(self, instance, value):
+        self.text = pretty(value, use_unicode=True)
+
 class MDLabelFraction(MDLabel):
     numerator = NumericProperty(0)
     denominator = NumericProperty(0)
