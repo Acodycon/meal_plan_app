@@ -73,16 +73,18 @@ class Meal_Plan(Base):
     dinner = Column(Boolean)
     snack = Column(Boolean)
     day_range = Column(Integer)
-    meal_plan_id_list = Column(String)
+    meal_id_and_ingredient_id__unit__amount_list = Column(String)
+    adjusted = Column(Boolean)
 
-    def init(self,name,breakfast,lunch,dinner,snack, day_range, meal_plan_id_list):
+    def init(self,name,breakfast,lunch,dinner,snack, day_range, meal_id_and_ingredient_id__unit__amount_list, adjusted):
         self.name = name
         self.breakfast = breakfast
         self.lunch = lunch
         self.dinner = dinner
         self.snack = snack
         self.day_range  = day_range
-        self.meal_plan_id_list = meal_plan_id_list
+        self.meal_id_and_ingredient_id__unit__amount_list = meal_id_and_ingredient_id__unit__amount_list
+        self.adjusted = adjusted
 
 class Settings(Base):
     __tablename__ = "settings"
@@ -614,7 +616,7 @@ def Create_Entries():
     add_ingredient_to_meal("Chicken Wraps","Parmesan",10,100)
 
     add_ingredient_to_meal("Chicken Wraps","Wraps",2,1)
-# Create_Entries()
+#Create_Entries()
 Calories_Per_Day = 1500
 
 def Adjust_Calories_Per_Day(Meal_List:list , n:int,Calories_Per_Day) -> None:
@@ -3371,7 +3373,7 @@ s.close()
 class Meal_Plan_Item(MDBoxLayout):
     color = ListProperty([0,0,0,1])
 
-    def __init__(self, meal_id, meal_type, pos_in_list, *args, **kwargs):
+    def __init__(self, meal_id, meal_type, pos_in_list, ingredient_id__unit__amount_list, *args, **kwargs):
         super(Meal_Plan_Item, self).__init__(*args, **kwargs)
         self.meal_id = meal_id
         self.meal_type = meal_type
@@ -3390,6 +3392,7 @@ class Meal_Plan_Item(MDBoxLayout):
             "sausage":(.7,.2,.04,1)
         }
         self.color = [.5,.5,.5,1] if self.meal_type == "Breakfast" else [.2,.2,.2,1] if self.meal_type == "Lunch" else [.1,.1,.1,1] if self.meal_type == "Dinner" else [.05,.05,.05,1]
+        self.ingredient_id__unit__amount_list = ingredient_id__unit__amount_list
         self.get_stats()
         self.set_stats()
     
@@ -3399,7 +3402,6 @@ class Meal_Plan_Item(MDBoxLayout):
         self.meal_name = self.meal.name
         self.sweet_savory = self.meal.sweet_savory
         self.hot_cold = self.meal.hot_cold
-        self.ingredient_id__unit__amount_list = [[i.ingredient_id,i.ingredient.unit,i.ingredient.calories,i.ingredient.fats,i.ingredient.carbohydrates,i.ingredient.proteins,i.amount_numerator,i.amount_denominator,i.ingredient.name] for i in s.query(Association).filter(Association.meal_id==self.meal_id).all()]
         s.close()
     
     def set_stats(self):
@@ -3433,6 +3435,8 @@ class Meal_Plan_Item(MDBoxLayout):
             ic(i[8],i[2]*i[6]/i[7],i[6])
     def show_type(self):
         ic("type")
+        ic(self.meal_calories)
+        ic(sum([j[2]*j[6]/j[7] for j in self.ingredient_id__unit__amount_list]))
     
     def show_sweet_savory(self):
         ic("sweet_savory")
@@ -3483,10 +3487,14 @@ class Swap_Options_Dialog(MDBoxLayout):
         if new_meal_id_list:
             new_random_meal_id = rd.choice(new_meal_id_list)
             self.logic.meal_id = new_random_meal_id
-            self.logic.meal_plan_screen.meal_plan_id_list[self.logic.pos_in_list[0]][self.logic.pos_in_list[1]] = new_random_meal_id
+            self.logic.meal_plan_screen.ingredient_id__unit__amount_list[self.logic.pos_in_list[0]][self.logic.pos_in_list[1][0]] = new_random_meal_id
+            self.logic.meal_plan_screen.ingredient_id__unit__amount_list[self.logic.pos_in_list[0]][self.logic.pos_in_list[1][1]] = [[i.ingredient_id,i.ingredient.unit,i.ingredient.calories,i.ingredient.fats,i.ingredient.carbohydrates,i.ingredient.proteins,i.amount_numerator,i.amount_denominator,i.ingredient.name] for i in s.query(Association).filter(Association.meal_id == new_meal_id_list).all()]
+            self.logic.meal_plan_screen.adjusted = False
             self.logic.get_stats()
             self.logic.set_stats()
             self.popup_base.dismiss()
+        else:
+            ic("no more meals are saved")
     def select_new_meal_manuel(self):
         ic("manuel")
 
@@ -3499,7 +3507,6 @@ class Meal_Plan_Screen(MDScreen):
 
     def __init__(self, *args, **kwargs):
         super(Meal_Plan_Screen,self).__init__(*args, **kwargs)
-        self.internal_meal_plan = []
         s = Session()
         active_meal_plan = s.get(Meal_Plan,s.query(Active).first().meal_plan_id)
         if active_meal_plan:
@@ -3508,7 +3515,8 @@ class Meal_Plan_Screen(MDScreen):
             self.snack = active_meal_plan.snack
             self.dinner = active_meal_plan.dinner
             self.day_range = active_meal_plan.day_range
-            self.meal_plan_id_list = eval(active_meal_plan.meal_plan_id_list)
+            self.meal_id_and_ingredient_id__unit__amount_list = eval(active_meal_plan.meal_id_and_ingredient_id__unit__amount_list)
+            self.adjusted = active_meal_plan.adjusted
             self.active_meal_plan_id = active_meal_plan.id
             self.active_meal_plan_name = active_meal_plan.name
         else:
@@ -3516,8 +3524,9 @@ class Meal_Plan_Screen(MDScreen):
             self.lunch = False
             self.snack = False
             self.dinner = False
-            self.day_range = 0
-            self.meal_plan_id_list = None
+            self.day_range = 1
+            self.meal_id_and_ingredient_id__unit__amount_list = None
+            self.adjusted = False
             self.active_meal_plan_id = None
         s.close()
 
@@ -3540,6 +3549,7 @@ class Meal_Plan_Screen(MDScreen):
             c.ids.dinner.active = active_meal_plan_settings.dinner
             c.ids.snack.active = active_meal_plan_settings.snack
             c.ids.day_range.number = active_meal_plan_settings.day_range
+            c.ids.decrement_button.disabled = True if active_meal_plan_settings.day_range <= 1 else False
         else:
             c.ids.breakfast.active = self.breakfast
             c.ids.lunch.active = self.lunch
@@ -3550,13 +3560,25 @@ class Meal_Plan_Screen(MDScreen):
         s.close()
         self.popup_meal_plan_settings.open()
 
+    def set_page_icon_validity_status(self):
+        if self.day_range - 1 == self.ids.meal_plan.page:
+            self.ids.meal_plan_title.ids.right_actions.children[0].text_color = (0,0,0,.25)
+        else:
+            self.ids.meal_plan_title.ids.right_actions.children[0].text_color = (0,0,0,1)
+        if self.ids.meal_plan.page == 0:
+            self.ids.meal_plan_title.ids.left_actions.children[0].text_color = (0,0,0,.25)
+        else:
+            self.ids.meal_plan_title.ids.left_actions.children[0].text_color = (0,0,0,1)
+
     def increment_page(self):
         if self.day_range - 1 > self.ids.meal_plan.page:
             self.ids.meal_plan.page += 1
+        self.set_page_icon_validity_status()
 
     def decrement_page(self):
         if self.meal_plan.page > 0:
             self.ids.meal_plan.page -= 1
+        self.set_page_icon_validity_status()
 
     def generate_button_check_validity(self):
         if any ([self.breakfast,self.lunch,self.snack,self.dinner]) and self.day_range > 0 and not self.ids.meal_plan.children:
@@ -3564,24 +3586,38 @@ class Meal_Plan_Screen(MDScreen):
         else:
             return False
 
+    def erase_meal_plan_and_save_meal_plan_button_check_validity(self):
+        if self.ids.meal_plan.children:
+            self.ids.bottom_app_bar.ids.left_actions.children[3].text_color = (0,0,0,1)
+            self.ids.bottom_app_bar.ids.left_actions.children[2].text_color = (0,0,0,1)
+            return True
+        else:
+            self.ids.bottom_app_bar.ids.left_actions.children[3].text_color = (0,0,0,.25)
+            self.ids.bottom_app_bar.ids.left_actions.children[2].text_color = (0,0,0,.25)
+            return False
     def erase_meal_plan(self): # clears the current meal plan list and settings, doesnt delete it if it is already saved
-        ic("delete_meal_plan")
-        self.ids.meal_plan.clear_widgets()
-        self.breakfast = False
-        self.lunch = False
-        self.snack = False
-        self.dinner = False
-        self.day_range = 0
-        self.meal_plan_id_list = None
-        self.active_meal_plan_id = None
-        self.ids.meal_plan_title.title = "No current meal plan!"
-        s = Session()
-        s.query(Active).update({Active.meal_plan_id: None})
-        s.commit()
-        s.close()
+        if self.erase_meal_plan_and_save_meal_plan_button_check_validity():
+            ic("delete_meal_plan")
+            self.ids.meal_plan.clear_widgets()
+            self.breakfast = False
+            self.lunch = False
+            self.snack = False
+            self.dinner = False
+            self.day_range = 1
+            self.meal_id_and_ingredient_id__unit__amount_list = None
+            self.adjusted = False
+            self.active_meal_plan_id = None
+            self.ids.meal_plan_title.title = "No current meal plan!"
+            s = Session()
+            s.query(Active).update({Active.meal_plan_id: None})
+            s.commit()
+            s.close()
+            self.adjust_calories_button_check_validity()
+            self.erase_meal_plan_and_save_meal_plan_button_check_validity()
+            self.set_page_icon_validity_status()
 
     def open_save_meal_plan_options(self):
-        if self.ids.meal_plan.children:
+        if self.erase_meal_plan_and_save_meal_plan_button_check_validity():
             if not self.active_meal_plan_id:
                 ic("save_meal_plan")
                 c = Save_Meal_Plan_Dialog() # gives option to save meal plan when no active meal plan
@@ -3600,7 +3636,8 @@ class Meal_Plan_Screen(MDScreen):
                 c.snack = self.snack
                 c.dinner = self.dinner
                 c.day_range = self.day_range
-                c.meal_plan_id_list = self.meal_plan_id_list
+                c.meal_id_and_ingredient_id__unit__amount_list = self.meal_id_and_ingredient_id__unit__amount_list
+                c.adjusted = self.adjusted
                 self.popup_base.open()
             else:
                 ic("save changes")
@@ -3629,11 +3666,13 @@ class Meal_Plan_Screen(MDScreen):
         self.snack = meal_plan.snack
         self.dinner = meal_plan.dinner
         self.day_range = meal_plan.day_range
-        self.meal_plan_id_list = eval(meal_plan.meal_plan_id_list)
+        self.meal_id_and_ingredient_id__unit__amount_list = eval(meal_plan.meal_id_and_ingredient_id__unit__amount_list)
+        self.adjusted = meal_plan.adjusted
         self.active_meal_plan_name = meal_plan.name
         self.active_meal_plan_id = meal_plan.id
-        ic(self.meal_plan_id_list)
+        ic(self.meal_id_and_ingredient_id__unit__amount_list)
         self.display_meal_plan()
+        self.adjust_calories_button_check_validity()
     
     def display_meal_plan(self): # displays the current meal plan when one is active
         if self.active_meal_plan_id:
@@ -3641,17 +3680,20 @@ class Meal_Plan_Screen(MDScreen):
             self.ids.meal_plan_title.title = f"{self.active_meal_plan_name} : Day {self.ids.meal_plan.page + 1}"
             self.meal_type_list = [i for i in ["Breakfast" if self.breakfast else None, "Lunch" if self.lunch else None, "Snack" if self.snack else None, "Dinner" if self.dinner else None] if i]
             ic(self.meal_type_list)	
-            for index, i in enumerate(self.meal_plan_id_list):
+            for index, i in enumerate(self.meal_id_and_ingredient_id__unit__amount_list):
+                ic(self.meal_id_and_ingredient_id__unit__amount_list)
                 self.ids.meal_plan.add_widget(MDScrollView(pos_hint={"center_x":.5}))
                 self.ids.meal_plan.children[0].add_widget(Custom_MDGridLayout())
                 self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
                 for index2,j in enumerate(i):
                     ic(j)
-                    self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=j,
+                    self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=j[0],
                                                                                          meal_type=self.meal_type_list[index2],
-                                                                                         pos_in_list=(index,index2)))
+                                                                                         pos_in_list=(index,index2),
+                                                                                         ingredient_id__unit__amount_list=j[1]))
                     self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
                 self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(100)))
+        self.display_page_title()
 
     def open_load_meal_plan_dialog(self):
         ic("load_meal_plan")
@@ -3679,94 +3721,158 @@ class Meal_Plan_Screen(MDScreen):
             self.snack_id_list = [i.id for i in s.query(Meal).filter(Meal.snack == True).all()]
             self.dinner_id_list = [i.id for i in s.query(Meal).filter(Meal.dinner == True).all()]
             s.close()
-            self.meal_plan_id_list = [[] for i in range(self.day_range)]
+            self.meal_id_and_ingredient_id__unit__amount_list = [[] for i in range(self.day_range)]
             for index, i in enumerate(range(self.day_range)):
                 self.ids.meal_plan.add_widget(MDScrollView(pos_hint={"center_x":.5}))
                 self.ids.meal_plan.children[0].add_widget(Custom_MDGridLayout())
                 self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
                 if self.breakfast:
-                    breakfast_choice = rd.choice(self.breakfast_id_list)
-                    self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=breakfast_choice,
-                                                                                         meal_type="Breakfast",
-                                                                                         pos_in_list=(index,0)))
-                    self.meal_plan_id_list[index].append(breakfast_choice)
-                    self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
+                    if self.breakfast_id_list:
+                        breakfast_choice = rd.choice(self.breakfast_id_list)
+                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name] for j in s.query(Association).filter(Association.meal_id == breakfast_choice).all()]
+                        self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=breakfast_choice,
+                                                                                             meal_type="Breakfast",
+                                                                                             pos_in_list=(index,0),
+                                                                                             ingredient_id__unit__amount_list=ingredient_id__unit__amount_list))
+                        self.meal_id_and_ingredient_id__unit__amount_list[index].append([breakfast_choice,ingredient_id__unit__amount_list])
+                        self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
+                    else:
+                        ic("no breakfasts saved")
                 if self.lunch:
-                    lunch_choice = rd.choice(self.lunch_id_list)
-                    self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=lunch_choice,
-                                                                                         meal_type="Lunch",
-                                                                                         pos_in_list=(index,1 if self.breakfast else 0)))
-                    self.meal_plan_id_list[index].append(lunch_choice)
-                    self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
+                    if self.lunch_id_list:
+                        lunch_choice = rd.choice(self.lunch_id_list)
+                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name] for j in s.query(Association).filter(Association.meal_id == lunch_choice).all()]
+                        self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=lunch_choice,
+                                                                                             meal_type="Lunch",
+                                                                                             pos_in_list=(index,1 if self.breakfast else 0),
+                                                                                             ingredient_id__unit__amount_list=ingredient_id__unit__amount_list))
+                        self.meal_id_and_ingredient_id__unit__amount_list[index].append([lunch_choice,ingredient_id__unit__amount_list])
+                        self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
+                    else:
+                        ic("no lunchs saved")
                 if self.snack:
-                    snack_choice = rd.choice(self.snack_id_list)
-                    self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=snack_choice,
-                                                                                         meal_type="Snack",
-                                                                                         pos_in_list=(index,sum([1 for i in (self.breakfast,self.lunch) if i]))))
-                    self.meal_plan_id_list[index].append(snack_choice)
-                    self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
+                    if self.snack_id_list:
+                        snack_choice = rd.choice(self.snack_id_list)
+                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name] for j in s.query(Association).filter(Association.meal_id == snack_choice).all()]
+                        self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=snack_choice,
+                                                                                             meal_type="Snack",
+                                                                                             pos_in_list=(index,sum([1 for i in (self.breakfast,self.lunch) if i])),
+                                                                                             ingredient_id__unit__amount_list=ingredient_id__unit__amount_list))
+                        self.meal_id_and_ingredient_id__unit__amount_list[index].append([snack_choice,ingredient_id__unit__amount_list])
+                        self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
+                    else:
+                        ic("no snacks saved")
                 if self.dinner:
-                    dinner_choice = rd.choice(self.dinner_id_list)
-                    self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=dinner_choice,
-                                                                                         meal_type="Dinner",
-                                                                                         pos_in_list=(index,sum([1 for i in (self.breakfast,self.lunch,self.snack) if i]))))
-                    self.meal_plan_id_list[index].append(dinner_choice)
-                self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(100)))
+                    if self.dinner_id_list:
+                        dinner_choice = rd.choice(self.dinner_id_list)
+                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name] for j in s.query(Association).filter(Association.meal_id == dinner_choice).all()]
+                        self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=dinner_choice,
+                                                                                             meal_type="Dinner",
+                                                                                             pos_in_list=(index,sum([1 for i in (self.breakfast,self.lunch,self.snack) if i])),
+                                                                                             ingredient_id__unit__amount_list=ingredient_id__unit__amount_list))
+                        self.meal_id_and_ingredient_id__unit__amount_list[index].append([dinner_choice,ingredient_id__unit__amount_list])
+                    else:
+                        ic("no dinners saved")
+                    self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(100)))
             self.ids.meal_plan_title.title = "Day 1"
-            ic(self.meal_plan_id_list)
+            ic(self.meal_id_and_ingredient_id__unit__amount_list)
+            self.adjusted = False
+            self.adjust_calories_button_check_validity()
+            self.erase_meal_plan_and_save_meal_plan_button_check_validity()
+            self.set_page_icon_validity_status()
             self.display_page_title()
+
+    def adjust_calories_button_check_validity(self):
+        if not self.adjusted and self.ids.meal_plan.children:
+            self.ids.bottom_app_bar.ids.left_actions.children[0].text_color = (0,0,0,1)
+            return True
+        else:
+            self.ids.bottom_app_bar.ids.left_actions.children[0].text_color = (0,0,0,.25)
+            return False
+
     def adjust_calories(self):
         ic("adjust_calories")
         # ic(self.day_range)
         # after adjusting the plan should be tagged as adjusted and this function should not be executed again !
         # spices should maybe be handled seperately as to prevent them from being 0, maybe put in a lower bound for the calorie factor for them to not be processed! 
-        if MDApp.get_running_app().root.ids.settings_screen.ids.calories_per_day.text != "":
-            calorie_goal = float(MDApp.get_running_app().root.ids.settings_screen.ids.calories_per_day.text) # just a placeholder for testing purposes, should later be changed to the tdee value calculated in the settings
-            below = True
-            for i in range(self.day_range)[::-1]: # one loop = one day # Backwards to keep the order correct cause kivy iterates backwards over the children by default
-                meal_plan_item_list = [j for j in self.meal_plan.children[i].children[0].children[::-1] if isinstance(j, Meal_Plan_Item)] # j are the boxlayouts that hold the meal data # helper variable for later !
-                calories_per_meal = [j.meal_calories for j in meal_plan_item_list] 
-                current_calories_per_day = sum(calories_per_meal)
-                calorie_factor_per_meal_per_day = [j/current_calories_per_day for j in calories_per_meal] # how much each meal contributes to the total
-                ΔCals = calorie_goal - current_calories_per_day # number of calories that needs to be adjusted for
-                ΔCals_for_current_meal = [ΔCals * j for j in calorie_factor_per_meal_per_day] # how many calories to add to each meal
-                for index, j in enumerate(ΔCals_for_current_meal): # loop responsible for adjusting each meal individually this loop handles the divisible_by and indivisible ones in the first half and the others further down
-                    calories_per_ingredient = [k[2]*k[6]/k[7] for k in meal_plan_item_list[index].ingredient_id__unit__amount_list]
-                    ic(j)
-                    calorie_factor_per_ingredient = [k[2]*k[6]/k[7]/sum(calories_per_ingredient) for k in (meal_plan_item_list[index].ingredient_id__unit__amount_list)] # the unit might not be neccessary, the same condition can be checked with the denominator value !!!
-                    ic(calorie_factor_per_ingredient)
-                    numerator_amount_to_add_per_ingredient = [(m.floor(j*calorie_factor_per_ingredient[index2]/(k[2]/k[7])) if below else m.ceil(j*calorie_factor_per_ingredient[index2]/(k[2]/k[7]))) if abs(j*calorie_factor_per_ingredient[index2]) > (k[2]/k[7]) else 0 for index2,k in enumerate(meal_plan_item_list[index].ingredient_id__unit__amount_list)]
-                    ic(numerator_amount_to_add_per_ingredient)
-                    for index2,k in enumerate(numerator_amount_to_add_per_ingredient):
-                        new_numerator_amount = meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] + numerator_amount_to_add_per_ingredient[index2] if meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] + numerator_amount_to_add_per_ingredient[index2] >= 1 else 1
-                        j -= meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][2] * (new_numerator_amount - meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6]) / meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][7]
-                        meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] = new_numerator_amount
-                    ic(sum([i[2]*i[6]/i[7] for i in meal_plan_item_list[index].ingredient_id__unit__amount_list]))
-                    ic(j)
-                    previousj = j-1
-                    while previousj != j:
-                        previousj = j
-                        for index2,k in enumerate(meal_plan_item_list[index].ingredient_id__unit__amount_list):
-                            helperj = j
-                            ic(j)
-                            minimum_calorie_amount_for_current_ingredient = k[2]/k[7]
-                            ic(minimum_calorie_amount_for_current_ingredient)
-                            j = (j + minimum_calorie_amount_for_current_ingredient if j < 0 else j - minimum_calorie_amount_for_current_ingredient) if abs(j) - minimum_calorie_amount_for_current_ingredient >= 0 else j
-                            if j != helperj:
-                                if helperj > j:
-                                    meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] += 1
-                                elif helperj < j:
-                                    meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] = meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] - 1 if meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] > 1 else 1
-                    ic(f"final j = {j}")
-                    meal_plan_item_list[index].set_stats()
-                self.display_page_title()
+        if self.adjust_calories_button_check_validity():
+            if MDApp.get_running_app().root.ids.settings_screen.ids.calories_per_day.text != "":
+                calorie_goal = float(MDApp.get_running_app().root.ids.settings_screen.ids.calories_per_day.text) # just a placeholder for testing purposes, should later be changed to the tdee value calculated in the settings
+                below = True
+                for i in range(self.day_range)[::-1]: # one loop = one day # Backwards to keep the order correct cause kivy iterates backwards over the children by default
+                    meal_plan_item_list = [j for j in self.meal_plan.children[i].children[0].children[::-1] if isinstance(j, Meal_Plan_Item)] # j are the boxlayouts that hold the meal data # helper variable for later !
+                    calories_per_meal = [j.meal_calories for j in meal_plan_item_list] 
+                    current_calories_per_day = sum(calories_per_meal)
+                    calorie_factor_per_meal_per_day = [j/current_calories_per_day for j in calories_per_meal] # how much each meal contributes to the total
+                    calorie_factor_goal_per_meal = [.2,.3,.2,.3] # how each meal should make up for in calories, supposed to be adjustable in the settings ######## NEEDS TO BE ADDED TO THE SETTINGS
+                    calorie_goal_per_meal = [j*calorie_goal for j in calorie_factor_goal_per_meal]
+                    ΔCals_for_current_meal = [j-calories_per_meal[index] for index, j in enumerate(calorie_goal_per_meal)]
+                    ΔCals = calorie_goal - current_calories_per_day # number of calories that needs to be adjusted for
+                    ΔCals_for_current_meal2 = [ΔCals * j for j in calorie_factor_per_meal_per_day] # how many calories to add to each meal
+                    ic(ΔCals_for_current_meal)
+                    for index, j in enumerate(ΔCals_for_current_meal): # loop responsible for adjusting each meal individually this loop handles the divisible_by and indivisible ones in the first half and the others further down
+                        calories_per_ingredient = [k[2]*k[6]/k[7] for k in meal_plan_item_list[index].ingredient_id__unit__amount_list]
+                        ic(j)
+                        calorie_factor_per_ingredient = [k[2]*k[6]/k[7]/sum(calories_per_ingredient) for k in (meal_plan_item_list[index].ingredient_id__unit__amount_list)] # the unit might not be neccessary, the same condition can be checked with the denominator value !!!
+                        ic(calorie_factor_per_ingredient)
+                        numerator_amount_to_add_per_ingredient = [(m.floor(j*calorie_factor_per_ingredient[index2]/(k[2]/k[7])) if below else m.ceil(j*calorie_factor_per_ingredient[index2]/(k[2]/k[7]))) if abs(j*calorie_factor_per_ingredient[index2]) > (k[2]/k[7]) else 0 for index2,k in enumerate(meal_plan_item_list[index].ingredient_id__unit__amount_list)]
+                        ic(numerator_amount_to_add_per_ingredient)
+                        for index2,k in enumerate(numerator_amount_to_add_per_ingredient):
+                            new_numerator_amount = meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] + numerator_amount_to_add_per_ingredient[index2] if meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] + numerator_amount_to_add_per_ingredient[index2] >= 1 else 1
+                            j -= meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][2] * (new_numerator_amount - meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6]) / meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][7]
+                            meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] = new_numerator_amount
+                        ic(sum([i[2]*i[6]/i[7] for i in meal_plan_item_list[index].ingredient_id__unit__amount_list]))
+                        ic(j)
+                        previousj = j-1
+                        while previousj != j:
+                            previousj = j
+                            for index2,k in enumerate(meal_plan_item_list[index].ingredient_id__unit__amount_list):
+                                ic(j)
+                                minimum_calorie_amount_for_current_ingredient = k[2]/k[7]
+                                ic(minimum_calorie_amount_for_current_ingredient)
+                                ic(meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6])
+                                if j > 0:
+                                    if j >= minimum_calorie_amount_for_current_ingredient:
+                                        j -= minimum_calorie_amount_for_current_ingredient
+                                        meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] += 1
+                                elif j < 0:
+                                    if abs(j) >= minimum_calorie_amount_for_current_ingredient and meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] > 1:
+                                        meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] -= 1
+                                        j += minimum_calorie_amount_for_current_ingredient
+                                    
+                                # j = (j + minimum_calorie_amount_for_current_ingredient if j < 0 else j - minimum_calorie_amount_for_current_ingredient) if abs(j) - minimum_calorie_amount_for_current_ingredient >= 0 else j
+                                # if j != helperj:
+                                #     if helperj > j:
+                                #         meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] += 1
+                                #     elif helperj < j:
+                                #         meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] = meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] - 1 if meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] > 1 else 1
+                                asd = sum([i[2]*i[6]/i[7] for i in meal_plan_item_list[index].ingredient_id__unit__amount_list])
+                                ic(asd)
+                            # for index2,k in enumerate(meal_plan_item_list[index].ingredient_id__unit__amount_list):
+                            #     helperj = j
+                            #     ic(j)
+                            #     minimum_calorie_amount_for_current_ingredient = k[2]/k[7]
+                            #     ic(minimum_calorie_amount_for_current_ingredient)
+                            #     j = (j + minimum_calorie_amount_for_current_ingredient if j < 0 else j - minimum_calorie_amount_for_current_ingredient) if abs(j) - minimum_calorie_amount_for_current_ingredient >= 0 else j
+                            #     if j != helperj:
+                            #         if helperj > j:
+                            #             meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] += 1
+                            #         elif helperj < j:
+                            #             meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] = meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] - 1 if meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] > 1 else 1
+                        ic(f"final j = {j}")
+                        meal_plan_item_list[index].set_stats()
+                    self.adjusted = True
+                    self.adjust_calories_button_check_validity()
+                    self.display_page_title()
+            else:
+                ic("you need to set your settings first")
         else:
-            ic("you need to set your settings first")
-
+            ic("plan has already been adjusted!")
 
     def display_page_title(self):
         if not self.active_meal_plan_id:
             if self.ids.meal_plan.children:
+                ic(self.day_range-self.ids.meal_plan.page - 1)
                 self.ids.meal_plan_title.title = f"Day: {self.ids.meal_plan.page + 1} // Calories: {round(sum(i.meal_calories for i in self.meal_plan.children[self.day_range-self.ids.meal_plan.page - 1].children[0].children[::-1] if isinstance(i, Meal_Plan_Item)),2)}"
         else:
             ic(self.day_range)
@@ -3788,7 +3894,8 @@ class Save_Meal_Plan_Changes_Dialog(MDBoxLayout):
             Meal_Plan.snack : self.logic.snack,
             Meal_Plan.dinner : self.logic.dinner,
             Meal_Plan.day_range : self.logic.day_range,
-            Meal_Plan.meal_plan_id_list : str(self.logic.meal_plan_id_list)
+            Meal_Plan.meal_id_and_ingredient_id__unit__amount_list : str(self.logic.meal_id_and_ingredient_id__unit__amount_list),
+            Meal_Plan.adjusted : self.logic.adjusted
             }
         )
         s.commit()
@@ -3863,7 +3970,9 @@ class Select_Meal_Plan_Options_Dialog(MDBoxLayout):
     def load_meal_plan(self):
         ic("load_meal_plan")
         self.meal_plan_screen.load_meal_plan_settings(self.meal_plan_id)
+        self.meal_plan_screen.set_page_icon_validity_status()
         self.meal_plan_screen.display_page_title()
+        self.meal_plan_screen.erase_meal_plan_and_save_meal_plan_button_check_validity()
         s = Session()
         s.query(Active).update({Active.meal_plan_id:self.meal_plan_id})
         s.commit()
@@ -3932,7 +4041,8 @@ class Save_Meal_Plan_Dialog(MDBoxLayout):
                 c.snack = self.snack
                 c.dinner = self.dinner
                 c.day_range = self.day_range
-                c.meal_plan_id_list = self.meal_plan_id_list
+                c.meal_id_and_ingredient_id__unit__amount_list = self.meal_id_and_ingredient_id__unit__amount_list
+                c.adjusted = self.adjusted
                 c.popup_meal_plan_already_exists_layer2 = self.popup_meal_plan_already_exists_layer2
                 self.popup_meal_plan_already_exists_layer2.open()
             else:
@@ -3942,7 +4052,8 @@ class Save_Meal_Plan_Dialog(MDBoxLayout):
                 meal_plan_query.snack = self.snack
                 meal_plan_query.dinner = self.dinner
                 meal_plan_query.day_range = self.day_range
-                meal_plan_query.meal_plan_id_list = str(self.meal_plan_id_list)
+                meal_plan_query.meal_id_and_ingredient_id__unit__amount_list = str(self.meal_id_and_ingredient_id__unit__amount_list)
+                meal_plan_query.adjusted = self.adjusted
                 s.commit()
                 s.close()
         else:
@@ -3953,7 +4064,8 @@ class Save_Meal_Plan_Dialog(MDBoxLayout):
                 snack=self.snack,
                 dinner=self.dinner,
                 day_range=self.day_range,
-                meal_plan_id_list=str(self.meal_plan_id_list)
+                meal_id_and_ingredient_id__unit__amount_list=str(self.meal_id_and_ingredient_id__unit__amount_list),
+                adjusted=self.adjusted
             )
             s.add(new_meal_plan)            
             s.commit()
@@ -3983,7 +4095,8 @@ class Meal_Plan_Already_Exists_Dialog(MDBoxLayout):
         meal_plan_query.snack = self.snack
         meal_plan_query.dinner = self.dinner
         meal_plan_query.day_range = self.day_range
-        meal_plan_query.meal_plan_id_list = str(self.meal_plan_id_list)
+        meal_plan_query.meal_id_and_ingredient_id__unit__amount_list = str(self.meal_id_and_ingredient_id__unit__amount_list)
+        meal_plan_query.adjusted = self.adjusted
         s.query(Active).update({Active.meal_plan_id: self.meal_plan_id})
         s.commit()
         s.close()
@@ -4004,9 +4117,9 @@ class  Meal_Plan_Settings_Dialog(MDBoxLayout):
             self.ids.apply_settings_button.disabled = True
 
     def decrement_day_range(self):
-        if self.ids.day_range.number > 0:
+        if self.ids.day_range.number > 1:
             self.ids.day_range.number -= 1
-            if self.ids.day_range.number == 0:
+            if self.ids.day_range.number == 1:
                 self.ids.decrement_button.disabled = True
     
     def increment_day_range(self):
