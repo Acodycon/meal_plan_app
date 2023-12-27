@@ -1,10 +1,12 @@
 Main_Logic
 <Main_Logic>:
+    name: "Main_Logic"
     screen_manager: screen_manager
     meal_plan_screen: meal_plan_screen
     settings_screen: settings_screen
     ingredients_screen: ingredients_screen
     meals_screen: meals_screen
+    shopping_list_screen: shopping_list_screen
     nav_drawer: nav_drawer
     MDNavigationLayout:
         size_hint_y:1
@@ -18,6 +20,8 @@ Main_Logic
                 id: ingredients_screen
             Meals_Screen:
                 id: meals_screen
+            Shopping_List_Screen:
+                id: shopping_list_screen
         Nav_Drawer:
             id: nav_drawer
 
@@ -88,11 +92,25 @@ Main_Logic
                         root.set_state("close")
                     IconLeftWidget:
                         icon: "food"
+                OneLineIconListItem:
+                    text: "Shopping list"
+                    on_release:
+                        app.root.ids.screen_manager.current = "Shopping_List_Screen"
+                        root.set_state("close")
+                    IconLeftWidget:
+                        icon: "shopping-outline"
 <Meal_Plan_Screen>:
     name: "Meal_Plan_Screen"
     meal_plan_title: meal_plan_title
+    increment_page_button: increment_page_button
+    current_meal_plan_display_name: current_meal_plan_display_name
+    decrement_page_button: decrement_page_button
     meal_plan: meal_plan
     bottom_app_bar: bottom_app_bar
+    erase_meal_plan_button: erase_meal_plan_button
+    save_meal_plan_button: save_meal_plan_button
+    display_saved_meal_plans_button: display_saved_meal_plans_button
+    adjust_calories_button: adjust_calories_button
     BoxLayout:
         orientation: "vertical"
         MDTopAppBar:
@@ -103,11 +121,33 @@ Main_Logic
             height: dp(2)
         MDTopAppBar:
             id: meal_plan_title
-            title: "No current meal plan!"
-            font_style: "H4"
-            halign: "center"
-            right_action_items: [["chevron-right", lambda x: root.increment_page()]]
-            left_action_items: [["chevron-left", lambda x: root.decrement_page()]]
+            MDBoxLayout:
+                ActionTopAppBarButton:
+                    id: decrement_page_button
+                    icon: "chevron-left"
+                    theme_text_color: "Custom"
+                    text_color: (0,0,0,1)
+                    pos_hint: {"center_y":1}
+                    on_release:
+                        root.decrement_page()
+                MDLabel:
+                    id: current_meal_plan_display_name
+                    text: "No current meal plan!"
+                    theme_text_color: "Custom"
+                    text_color: 0,0,0,1
+                    pos_hint: {"center_y":1}
+                    halign: "center"
+                    font_style: "H6"
+                ActionTopAppBarButton:
+                    id: increment_page_button
+                    icon: "chevron-right"
+                    theme_text_color: "Custom"
+                    text_color: (0,0,0,1)
+                    pos_hint: {"center_y":1}
+                    on_release:
+                        root.increment_page()
+            # right_action_items: [["chevron-right", lambda x: root.increment_page()]]
+            # left_action_items: [["chevron-left", lambda x: root.decrement_page()]]
         Widget:
             size_hint_y:None
             height: dp(2)
@@ -118,14 +158,74 @@ Main_Logic
     MDBottomAppBar:
         MDTopAppBar:
             id: bottom_app_bar
-            title: "Actions"
             icon: "restart"
             theme_text_color: "Custom"
             text_color: 1,1,1,1
             on_action_button: root.generate_meal_plan()
             type: "bottom"
             mode: "end"
-            left_action_items: [["dots-vertical", lambda x: root.open_meal_plan_settings()],["eraser",lambda x: root.erase_meal_plan()],["content-save-outline",lambda x: root.open_save_meal_plan_options()],["folder-open-outline",lambda x: root.open_load_meal_plan_dialog()],["adjust",lambda x: root.adjust_calories()]]
+            MDBoxLayout:
+                ActionTopAppBarButton:
+                    icon: "dots-vertical"
+                    theme_text_color: "Custom"
+                    text_color: (0,0,0,1)
+                    pos_hint: {"center_y":1}
+                    on_release:
+                        root.open_meal_plan_settings()
+                ActionTopAppBarButton:
+                    id: erase_meal_plan_button
+                    icon: "eraser"
+                    theme_text_color: "Custom"
+                    text_color: (0,0,0,1)
+                    pos_hint: {"center_y":1}
+                    on_touch_down:
+                        root.test_touch_down(*args)
+                    on_touch_up:
+                        root.test_touch_up(*args)
+                    on_release:
+                        root.erase_meal_plan()
+                ActionTopAppBarButton:
+                    id: save_meal_plan_button
+                    icon: "content-save-outline"
+                    theme_text_color: "Custom"
+                    text_color: (0,0,0,1)
+                    pos_hint: {"center_y":1}
+                    on_touch_down:
+                        root.test_touch_down(*args)
+                    on_touch_up:
+                        root.test_touch_up(*args)
+                    on_release:
+                        root.open_save_meal_plan_options()
+                ActionTopAppBarButton:
+                    id: display_saved_meal_plans_button
+                    icon: "folder-open-outline"
+                    theme_text_color: "Custom"
+                    text_color: (0,0,0,1)
+                    pos_hint: {"center_y":1}
+                    on_touch_down:
+                        root.test_touch_down(*args)
+                    on_touch_up:
+                        root.test_touch_up(*args)
+                    on_release:
+                        root.open_load_meal_plan_dialog()
+                ActionTopAppBarButton:
+                    id: adjust_calories_button
+                    icon: "adjust"
+                    theme_text_color: "Custom"
+                    text_color: (0,0,0,1)
+                    pos_hint: {"center_y":1}
+                    on_touch_down:
+                        root.test_touch_down(*args)
+                    on_touch_up:
+                        root.test_touch_up(*args)
+                    on_release:
+                        root.adjust_calories()
+                MDLabel:
+                    text: "Actions"
+                    font_style: "H6"
+                    theme_text_color: "Custom"
+                    text_color: 0,0,0,1
+                    pos_hint: {"center_y":1}
 <Meal_Plan_Item>:
     size_hint_x: None
     width: app.root.width*.8
@@ -451,25 +551,43 @@ Main_Logic
         size_hint: 1,None
 <Meal_Plan_Settings_Dialog>:
     size_hint_y: None
-    height: app.root.height*.5
+    height: app.root.height*.6
     orientation: "vertical"
-    decrement_button: decrement_button
+    day_range_decrement_button: day_range_decrement_button
     day_range: day_range
     breakfast: breakfast
+    set_min_breakfast_button: set_min_breakfast_button
+    breakfast_percent_decrement_button: breakfast_percent_decrement_button
+    breakfast_percent_label: breakfast_percent_label
+    breakfast_percent_increment_button: breakfast_percent_increment_button
+    set_max_breakfast_button: set_max_breakfast_button
     lunch: lunch
-    dinner: dinner
+    set_min_lunch_button: set_min_lunch_button
+    lunch_percent_decrement_button: lunch_percent_decrement_button
+    lunch_percent_label: lunch_percent_label
+    lunch_percent_increment_button: lunch_percent_increment_button
+    set_max_lunch_button: set_max_lunch_button
     snack: snack
+    set_min_snack_button: set_min_snack_button
+    snack_percent_decrement_button: snack_percent_decrement_button
+    snack_percent_label: snack_percent_label
+    snack_percent_increment_button: snack_percent_increment_button
+    set_max_snack_button: set_max_snack_button
+    dinner: dinner
+    dinner_percent_decrement_button: dinner_percent_decrement_button
+    dinner_percent_label: dinner_percent_label
+    dinner_percent_increment_button: dinner_percent_increment_button
     apply_settings_button: apply_settings_button
     MDLabel:
         size_hint_y:1
         text: "Length in days"
-        haling: "center"
+        halign: "center"
     MDBoxLayout:
         size_hint_y:1
         Widget:
             size_hint_x:.5
         MDIconButton:
-            id: decrement_button
+            id: day_range_decrement_button
             icon: "minus"
             icon_size: dp(25)
             pos_hint: {"center_y":.5}
@@ -478,7 +596,6 @@ Main_Logic
                 root.decrement_day_range()
         MDLabelNumber:
             id: day_range
-            text: "0"
             number: 0
             halign: "center"
             size_hint_x:1
@@ -491,6 +608,10 @@ Main_Logic
                 root.increment_day_range()
         Widget:
             size_hint_x:.5
+    MDLabel:
+        size_hint_y:1
+        text: "Meals included and percentage"
+        halign: "center"
     MDBoxLayout:
         size_hint_y:1
         Widget:
@@ -498,15 +619,41 @@ Main_Logic
         MDLabel:
             text: "breakfast"
             size_hint_x:2
-        Widget:
-            size_hint_x:1.2
         MDCheckbox:
             id: breakfast
             size_hint_x:.8
             on_active:
                 root.check_apply_settings_button_validity()
-        Widget:
-            size_hint_x:1
+                root.set_percentage_availability_breakfast()
+        MDIconButton:
+            id: set_min_breakfast_button
+            icon: "chevron-double-down"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.set_min_breakfast()
+        MDIconButton:
+            id: breakfast_percent_decrement_button
+            icon: "minus"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.decrement_breakfast_percentage()
+        MDLabelPercentage:
+            id: breakfast_percent_label
+            theme_text_color: "Custom"
+            percentage: 25
+            halign: "center"
+        MDIconButton:
+            id: breakfast_percent_increment_button
+            icon: "plus"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.increment_breakfast_percentage()
+        MDIconButton:
+            id: set_max_breakfast_button
+            icon: "chevron-double-up"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.set_max_breakfast()
     MDBoxLayout:
         size_hint_y:1
         Widget:
@@ -514,15 +661,41 @@ Main_Logic
         MDLabel:
             text: "lunch"
             size_hint_x:2
-        Widget:
-            size_hint_x:1.2
         MDCheckbox:
             id: lunch
             size_hint_x:.8
             on_active:
                 root.check_apply_settings_button_validity()
-        Widget:
-            size_hint_x:1
+                root.set_percentage_availability_lunch()
+        MDIconButton:
+            id: set_min_lunch_button
+            icon: "chevron-double-down"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.set_min_lunch()
+        MDIconButton:
+            id: lunch_percent_decrement_button
+            icon: "minus"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.decrement_lunch_percentage()
+        MDLabelPercentage:
+            id: lunch_percent_label
+            theme_text_color: "Custom"
+            percentage: 25
+            halign: "center"
+        MDIconButton:
+            id: lunch_percent_increment_button
+            icon: "plus"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.increment_lunch_percentage()
+        MDIconButton:
+            id: set_max_lunch_button
+            icon: "chevron-double-up"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.set_max_lunch()
     MDBoxLayout:
         size_hint_y:1
         Widget:
@@ -530,15 +703,41 @@ Main_Logic
         MDLabel:
             text: "snack"
             size_hint_x:2
-        Widget:
-            size_hint_x:1.2
         MDCheckbox:
             id: snack
             size_hint_x:.8
             on_active:
                 root.check_apply_settings_button_validity()
-        Widget:
-            size_hint_x:1
+                root.set_percentage_availability_snack()
+        MDIconButton:
+            id: set_min_snack_button
+            icon: "chevron-double-down"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.set_min_snack()
+        MDIconButton:
+            id: snack_percent_decrement_button
+            icon: "minus"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.decrement_snack_percentage()
+        MDLabelPercentage:
+            id: snack_percent_label
+            theme_text_color: "Custom"
+            percentage: 25
+            halign: "center"
+        MDIconButton:
+            id: snack_percent_increment_button
+            icon: "plus"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.increment_snack_percentage()
+        MDIconButton:
+            id: set_max_snack_button
+            icon: "chevron-double-up"
+            pos_hint: {"center_y":.5}
+            on_release:
+                root.set_max_snack()
     MDBoxLayout:
         size_hint_y:1
         Widget:
@@ -553,8 +752,22 @@ Main_Logic
             size_hint_x:.8
             on_active:
                 root.check_apply_settings_button_validity()
+                root.set_percentage_availability_dinner()
         Widget:
             size_hint_x:1
+        MDIconButton:
+            id: dinner_percent_decrement_button
+            icon: "minus"
+            pos_hint: {"center_y":.5}
+        MDLabelPercentage:
+            id: dinner_percent_label
+            theme_text_color: "Custom"
+            percentage: 25
+            halign: "center"
+        MDIconButton:
+            id: dinner_percent_increment_button
+            icon: "plus"
+            pos_hint: {"center_y":.5}
     MDBoxLayout:
         size_hint_y:1
         Widget:
@@ -599,29 +812,6 @@ Main_Logic
             title: "Settings"
             font_style: "H1"
             left_action_items: [["chevron-left", lambda x: root.transition_to_meal_plan_screen()],["swap-horizontal", lambda x: root.open_settings_search()]]
-        # MDBoxLayout:
-        #     size_hint: .9,1
-        #     MDIconButton:
-        #         icon: "chevron-left"
-        #         icon_size: dp(50)
-        #         pos_hint: {"top":1}
-        #         on_release:
-        #             app.root.ids.screen_manager.current = "Meal_Plan_Screen"
-        #             app.root.ids.screen_manager.transition.direction = "right"
-        #             app.root.load_active_profile()
-        #     MDIconButton:
-        #         icon: "swap-horizontal"
-        #         icon_size: dp(50)
-        #         pos_hint: {"top":1}
-        #         on_release:
-        #             root.open_settings_search()
-        #     MDLabel:
-        #         text: "Settings"
-        #         pos_hint: {"top":1,"center_x":.5}
-        #         halign: "center"
-        #         size_hint_y: None
-        #         height: self.texture_size[1]
-        #         font_style: "H3"
         MDScrollView:
             size_hint: .9,7.5
             MDGridLayout:
@@ -900,7 +1090,7 @@ Main_Logic
                 text_color: (1,1,1,1)
                 icon_size: dp(50)
                 on_release:
-                    root.open_filter_dropdown()
+                    root.open_filter_menu()
         MDBoxLayout:
             id: layout
             orientation: "vertical"
@@ -917,7 +1107,142 @@ Main_Logic
             type: "bottom"
             mode: "center"
             on_action_button: root.open_add_ingredients_dialog()
-
+<Ingredient_List_Filter_Dialog>:
+    size_hint_y: None
+    height: app.root.height *.8
+    sort_order_label: sort_order_label
+    sorting_direction: sorting_direction
+    sort_by_calories_label: sort_by_calories_label
+    sort_by_fats_label: sort_by_fats_label
+    sort_by_carbohydrates_label: sort_by_carbohydrates_label
+    sort_by_proteins_label: sort_by_proteins_label
+    ingredient_type_filter: ingredient_type_filter
+    MDBoxLayout:
+        orientation: "vertical"
+        MDLabel:
+            text: "Sort order"
+            halign: "center"
+            font_style: "H5"
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_order_label
+                text: "High to Low"
+                size_hint_x:4
+            MDIconButton:
+                id: sorting_direction
+                icon: "sort-descending"
+                size_hint_x:1
+                pos_hint: {"center_y":.5}
+                on_release:
+                    root.set_sort_order()
+            Widget:
+                size_hint_x:1
+        MDLabel:
+            text: "Sort by"
+            halign: "center"
+            font_style: "H5"
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_calories_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Calories"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_calories
+                size_hint_x:1
+                on_active:
+                    root.check_calories(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_fats_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Fats"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_fats
+                size_hint_x:1
+                on_active:
+                    root.check_fats(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_carbohydrates_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Carbohydrates"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_carbohydrates
+                size_hint_x:1
+                on_active:
+                    root.check_carbohydrates(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_proteins_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Proteins"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_proteins
+                size_hint_x:1
+                on_active:
+                    root.check_proteins(*args)
+            Widget:
+                size_hint_x:1
+        MDLabel:
+            text: "Filter by"
+            halign: "center"
+            font_style: "H5"
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                text: "Type"
+                size_hint_x:4
+            MDIconButton:
+                id: ingredient_type_filter
+                icon: "filter-variant"
+                theme_text_color: "Custom"
+                size_hint_x:1
+                on_release:
+                    root.open_filter_dropdown()
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x: 1
+            MDFlatButton:
+                text: "Cancel"
+                size_hint: 2,.5
+                on_release:
+                    root.cancel()
+            Widget:
+                size_hint_x: 2
+            MDRaisedButton:
+                text: "Apply"
+                size_hint: 2,.5
+                on_release:
+                    root.apply_filter()
+            Widget:
+                size_hint_x: 1
 <Add_Ingredient_Dialog>:
     size_hint_y: None
     height: dp(800)
@@ -1318,8 +1643,6 @@ Main_Logic
 
 <Meals_Screen>:
     name: "Meals_Screen"
-    # meal_label: meal_label
-    # back_button: back_button
     search_icon: search_icon
     meal_search: meal_search
     filter: filter
@@ -1332,28 +1655,6 @@ Main_Logic
             title: "Meals"
             font_style: "H3"
             left_action_items: [["chevron-left", lambda x: root.transition_to_meal_plan_screen()]]
-    # MDBoxLayout:
-    #     size_hint_y: None
-    #     height: meal_label.height
-    #     pos_hint: {"top":1}
-    #     MDIconButton:
-    #         id: back_button
-    #         icon: "chevron-left"
-    #         pos_hint: {"center_y":.5}
-    #         icon_size: dp(50)
-    #         on_release:
-    #             app.root.ids.screen_manager.current = "Meal_Plan_Screen"
-    #             app.root.ids.screen_manager.transition.direction = "right"
-    #             app.root.load_active_profile()
-    #     Widget:
-    #         size_hint_x: .1
-    #     MDLabel:
-    #         id: meal_label
-    #         size_hint_x: 1
-    #         text: "Meals"
-    #         font_style: "H3"
-    #     Widget:
-    #         size_hint_x: .1
         MDBoxLayout:
             size_hint_y: None
             height: search_icon.height
@@ -1390,19 +1691,6 @@ Main_Logic
             type: "bottom"
             mode: "center"
             on_action_button: root.open_add_meal_dialog()
-    # MDIconButton:
-    #     icon: "plus"
-    #     icon_size: dp(50)
-    #     pos_hint: {"center_x":.5,"bottom":0}
-    #     on_release:
-    #         root.open_add_meal_dialog()
-    # MDIconButton:
-    #     icon: "chevron-double-down"
-    #     icon_size: dp(50)
-    #     collapsed: True
-    #     pos_hint: {"center_x":.5,"top":.8}
-    #     on_release:
-    #         root.expand_collapse(self)
 
 
 <Filter_Dialog>:
@@ -1818,39 +2106,43 @@ Main_Logic
 
 <Display_Meal_Screen>:
     name: "Display_Meal_Screen"
-    meal_name: meal_name
+    top_app_bar: top_app_bar
     meal_ingredient_list: meal_ingredient_list
     MDBoxLayout:
         orientation: "vertical"
-        MDBoxLayout:
-            size_hint_y:None
-            height: meal_name.height
+        MDTopAppBar:
+            id: top_app_bar
             pos_hint: {"top":1}
-            MDIconButton:
-                id: back_button
-                icon: "chevron-left"
-                pos_hint: {"center_y":.5}
-                icon_size: dp(50)
-                on_release:
-                    root.remove_display_screen()
-                    app.root.ids.meals_screen.refresh_internal_list()
-                    app.root.ids.meals_screen.refresh_display_list()
-                    app.root.ids.screen_manager.current = "Meals_Screen"
-                    app.root.ids.screen_manager.transition.direction = "right"
-            Widget:
-                size_hint_x:.1
-            MDLabel:
-                id: meal_name
-                size_hint_x: 1
-                text: "Place_holder"
-                font_style: "H4"
-            Widget:
-                size_hint_x:.1
-        MDBoxLayout:
-            size_y: root.height*.9
-            ScrollView:
-                MDList:
-                    id: meal_ingredient_list
+            title: "Meals"
+            font_style: "H3"
+            left_action_items: [["chevron-left", lambda x: root.transition_to_meal_plan_screen()]]
+        # MDBoxLayout:
+            # size_hint_y:None
+            # height: meal_name.height
+            # pos_hint: {"top":1}
+            # MDIconButton:
+            #     id: back_button
+            #     icon: "chevron-left"
+            #     pos_hint: {"center_y":.5}
+            #     icon_size: dp(50)
+            #     on_release:
+            #         root.remove_display_screen()
+            #         app.root.ids.meals_screen.refresh_internal_list()
+            #         app.root.ids.meals_screen.refresh_display_list()
+            #         app.root.ids.screen_manager.current = "Meals_Screen"
+            #         app.root.ids.screen_manager.transition.direction = "right"
+            # Widget:
+            #     size_hint_x:.1
+            # MDLabel:
+            #     id: meal_name
+            #     size_hint_x: 1
+            #     text: "Place_holder"
+            #     font_style: "H4"
+            # Widget:
+            #     size_hint_x:.1
+        ScrollView:
+            MDList:
+                id: meal_ingredient_list
 
 <Meal_Ingredient_Options_Dialog>:
     size_hint_y: None
@@ -1947,7 +2239,7 @@ Main_Logic
                 text_color: (1,1,1,1)
                 icon_size: dp(50)
                 on_release:
-                    root.open_filter_dropdown()
+                    root.open_filter_menu()
         MDBoxLayout:
             id: layout
             orientation: "vertical"
@@ -1967,7 +2259,142 @@ Main_Logic
                     root.cancel()
             Widget:
                 size_hint_x:1
-
+<Ingredient_List_Filter_For_Add_Ing_To_Meal_Dialog>:
+    size_hint_y: None
+    height: app.root.height *.8
+    sort_order_label: sort_order_label
+    sorting_direction: sorting_direction
+    sort_by_calories_label: sort_by_calories_label
+    sort_by_fats_label: sort_by_fats_label
+    sort_by_carbohydrates_label: sort_by_carbohydrates_label
+    sort_by_proteins_label: sort_by_proteins_label
+    ingredient_type_filter: ingredient_type_filter
+    MDBoxLayout:
+        orientation: "vertical"
+        MDLabel:
+            text: "Sort order"
+            halign: "center"
+            font_style: "H5"
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_order_label
+                text: "High to Low"
+                size_hint_x:4
+            MDIconButton:
+                id: sorting_direction
+                icon: "sort-descending"
+                size_hint_x:1
+                pos_hint: {"center_y":.5}
+                on_release:
+                    root.set_sort_order()
+            Widget:
+                size_hint_x:1
+        MDLabel:
+            text: "Sort by"
+            halign: "center"
+            font_style: "H5"
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_calories_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Calories"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_calories
+                size_hint_x:1
+                on_active:
+                    root.check_calories(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_fats_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Fats"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_fats
+                size_hint_x:1
+                on_active:
+                    root.check_fats(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_carbohydrates_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Carbohydrates"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_carbohydrates
+                size_hint_x:1
+                on_active:
+                    root.check_carbohydrates(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_proteins_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Proteins"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_proteins
+                size_hint_x:1
+                on_active:
+                    root.check_proteins(*args)
+            Widget:
+                size_hint_x:1
+        MDLabel:
+            text: "Filter by"
+            halign: "center"
+            font_style: "H5"
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                text: "Type"
+                size_hint_x:4
+            MDIconButton:
+                id: ingredient_type_filter
+                icon: "filter-variant"
+                theme_text_color: "Custom"
+                size_hint_x:1
+                on_release:
+                    root.open_filter_dropdown()
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x: 1
+            MDFlatButton:
+                text: "Cancel"
+                size_hint: 2,.5
+                on_release:
+                    root.cancel()
+            Widget:
+                size_hint_x: 2
+            MDRaisedButton:
+                text: "Apply"
+                size_hint: 2,.5
+                on_release:
+                    root.apply_filter()
+            Widget:
+                size_hint_x: 1
 <Add_Ing_To_Meal_Unit_Piece_Divisible_Dialog>:
     size_hint_y: None
     height: dp(800)
@@ -2383,3 +2810,210 @@ Main_Logic
                     root.add_to_meal()
             Widget:
                 size_hint: 1,None
+
+<Shopping_List_Screen>:
+    name: "Shopping_List_Screen"
+    search_icon: search_icon
+    ing_search: ing_search
+    filter: filter
+    shopping_list_list: shopping_list_list
+    MDBoxLayout:
+        orientation: "vertical"
+        MDTopAppBar:
+            pos_hint: {"top":1}
+            title: "Shopping list"
+            font_style: "H3"
+            left_action_items: [["chevron-left",lambda x: root.transition_to_meal_plan_screen()]]
+        MDBoxLayout:
+            size_hint_y: None
+            height: search_icon.height
+            pos_hint: {"top":.9}
+            MDIconButton:
+                id: search_icon
+                icon: "magnify"
+                icon_size: dp(50)
+            MDTextField:
+                id: ing_search
+                hint_text: "Name of Ingredient"
+                on_text:
+                    root.display_shopping_list()
+            MDIconButtonSpinner:
+                id: filter
+                text: "All"
+                icon: "filter-variant"
+                theme_text_color: "Custom"
+                text_color: (1,1,1,1)
+                icon_size: dp(50)
+                on_release:
+                    root.open_filter_menu()
+        ScrollView:
+            MDList:
+                id: shopping_list_list
+
+<Shopping_List_Filter_Dialog>:
+    size_hint_y: None
+    height: dp(800)
+    sort_order_label: sort_order_label
+    sorting_direction: sorting_direction
+    sort_by_amount_label: sort_by_amount_label
+    sort_by_calories_label: sort_by_calories_label
+    sort_by_fats_label: sort_by_fats_label
+    sort_by_carbohydrates_label: sort_by_carbohydrates_label
+    sort_by_proteins_label: sort_by_proteins_label
+    ingredient_type_filter: ingredient_type_filter
+    exclude_checked_items: exclude_checked_items
+    MDBoxLayout:
+        orientation: "vertical"
+        MDLabel:
+            text: "Sort order"
+            halign: "center"
+            font_style: "H5"
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_order_label
+                text: "High to Low"
+                size_hint_x:4
+            MDIconButton:
+                id: sorting_direction
+                icon: "sort-descending"
+                size_hint_x:1
+                pos_hint: {"center_y":.5}
+                on_release:
+                    root.set_sort_order()
+            Widget:
+                size_hint_x:1
+        MDLabel:
+            text: "Sort by"
+            halign: "center"
+            font_style: "H5"
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_amount_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Amount"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_amount
+                size_hint_x:1
+                on_active:
+                    root.check_amount(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_calories_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Calories"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_calories
+                size_hint_x:1
+                on_active:
+                    root.check_calories(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_fats_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Fats"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_fats
+                size_hint_x:1
+                on_active:
+                    root.check_fats(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_carbohydrates_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Carbohydrates"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_carbohydrates
+                size_hint_x:1
+                on_active:
+                    root.check_carbohydrates(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                id: sort_by_proteins_label
+                theme_text_color: "Custom"
+                text_color: 1,1,1,.25
+                text: "Proteins"
+                size_hint_x:4
+            MDCheckbox:
+                id: sort_by_proteins
+                size_hint_x:1
+                on_active:
+                    root.check_proteins(*args)
+            Widget:
+                size_hint_x:1
+        MDLabel:
+            text: "Filter by"
+            halign: "center"
+            font_style: "H5"
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                text: "Type"
+                size_hint_x:4
+            MDIconButton:
+                id: ingredient_type_filter
+                icon: "filter-variant"
+                theme_text_color: "Custom"
+                size_hint_x:1
+                on_release:
+                    root.open_filter_dropdown()
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x:1
+            MDLabel:
+                text: "Exclude checked Items"
+                size_hint_x:4
+            MDCheckbox:
+                id: exclude_checked_items
+                size_hint_x:1
+                on_active:
+                    root.check_checked_items(*args)
+            Widget:
+                size_hint_x:1
+        MDBoxLayout:
+            Widget:
+                size_hint_x: 1
+            MDFlatButton:
+                text: "Cancel"
+                size_hint: 2,.5
+                on_release:
+                    root.cancel()
+            Widget:
+                size_hint_x: 2
+            MDRaisedButton:
+                text: "Apply"
+                size_hint: 2,.5
+                on_release:
+                    root.apply_filter()
+            Widget:
+                size_hint_x: 1

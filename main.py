@@ -69,22 +69,33 @@ class Meal_Plan(Base):
     id = Column(Integer,primary_key=True)
     name = Column(String)
     breakfast = Column(Boolean)
+    breakfast_percentage = Column(Integer)
     lunch = Column(Boolean)
+    lunch_percentage = Column(Integer)
     dinner = Column(Boolean)
+    dinner_percentage = Column(Integer)
     snack = Column(Boolean)
+    snack_percentage = Column(Integer)
     day_range = Column(Integer)
     meal_id_and_ingredient_id__unit__amount_list = Column(String)
+    shopping_list = Column(String)
     adjusted = Column(Boolean)
 
-    def init(self,name,breakfast,lunch,dinner,snack, day_range, meal_id_and_ingredient_id__unit__amount_list, adjusted):
+    def init(self, name, breakfast, breakfast_percentage, lunch, lunch_percentage, dinner, dinner_percentage, snack, snack_percentage, day_range, meal_id_and_ingredient_id__unit__amount_list, shopping_list, adjusted):
         self.name = name
         self.breakfast = breakfast
+        self.breakfast_percentage = breakfast_percentage
         self.lunch = lunch
+        self.lunch_percentage = lunch_percentage
         self.dinner = dinner
+        self.dinner_percentage = dinner_percentage
         self.snack = snack
+        self.snack_percentage = snack_percentage
         self.day_range  = day_range
         self.meal_id_and_ingredient_id__unit__amount_list = meal_id_and_ingredient_id__unit__amount_list
+        self.shopping_list = shopping_list
         self.adjusted = adjusted
+        
 
 class Settings(Base):
     __tablename__ = "settings"
@@ -619,96 +630,6 @@ def Create_Entries():
 #Create_Entries()
 Calories_Per_Day = 1500
 
-def Adjust_Calories_Per_Day(Meal_List:list , n:int,Calories_Per_Day) -> None:
-    """
-    Meal_List : List of Days where Days : List of Meals\n
-    n         : index of day in Meal_List
-    """
-    # Out of Date !!!
-    # List of calories per ingredient to be added
-    # shouldn't change for the whole function call of self !!!
-    # Except for indivisible Ingredients
-
-    # User Input
-    #ic(Calories_Per_Day)
-
-    # works as intented
-    #ic(get_Cals_per_Day(Meal_List,n))
-
-    # works as intented
-    # Amount of calories that are too much/little
-    Difference = Calories_Per_Day - get_Cals_per_Day(Meal_List,n)
-
-    #ic(Difference)
-
-    # works as intented
-    # List of percent of cals each meal makes up for in a day
-    Cals_To_Be_Added = [Difference * i for i in get_percent_factor(Meal_List,n)]
-
-    # For loop that adjusts one meal in each cycle
-    for index, i in enumerate(Meal_List[n]):
-        
-        # supports indivisible ingredients
-        # List of calories per ingredient in total for a given meal
-        Total_Cals_Per_Ingredient = [j.calories * j.amount / 100 if not j.divisible_by else j.calories * j.amount for j in Meal_List[n][index].ingredients]
-
-        # List of the percentage(of calories) each ingredient makes up for in one meal
-        Factor_Per_Ingredient = [j / sum(Total_Cals_Per_Ingredient) for j in Total_Cals_Per_Ingredient]
-       
-        # List of Amount of calories per ingredient that need to be added/subtracted
-        Cals_To_Be_Added_Per_Ingredient = [Cals_To_Be_Added[index] * j for j in Factor_Per_Ingredient]
-
-        # Counter from the inner for loop that counts calories added from indivisible ingredients
-        Calories_Already_Added_From_Indivisible_Ingredients = 0
-
-        # For loop that handles the indivisible ingredients
-        for index2, j in enumerate(Meal_List[n][index].ingredients):
-            if j.indivisible:
-                if j.calories == 0:
-                   continue
-                New_Amount = int(Cals_To_Be_Added_Per_Ingredient[index2]/j.calories)
-                if New_Amount > 0:
-                    Meal_List[n][index].ingredients[index2].amount += New_Amount
-                    Calories_Already_Added_From_Indivisible_Ingredients += New_Amount * Meal_List[n][index].ingredients[index2].calories
-            elif j.divisible_by:
-                from fractions import Fraction as F
-                if j.calories == 0:
-                    continue
-                New_Amount = F(int((Total_Cals_Per_Ingredient[index2] + Cals_To_Be_Added_Per_Ingredient[index2]) / (j.calories / j.divisible_by)),j.divisible_by)
-                if float(New_Amount) > 0:
-                    Calories_Already_Added_From_Indivisible_Ingredients += New_Amount * j.calories
-                    Meal_List[n][index].ingredients[index2].amount = New_Amount
-        ## If I move to divisible by the following part should stay the same functionally ##
-
-        # sets the calorie difference to the new value after indivisible ingredients have been handled
-        Cals_To_Be_Added[index] -= Calories_Already_Added_From_Indivisible_Ingredients
-
-        # new evaluation after value adjustment
-        # indivisible ingredients are ignored (set to 0)
-        Total_Cals_Per_Ingredient = [j.calories * j.amount / 100 if not j.divisible_by else 0 for j in Meal_List[n][index].ingredients]
-        
-        # new evaluation after value adjustment
-        # indivisible ingredients are ingnored (set to 0)
-        Factor_Per_Ingredient = [j / sum(Total_Cals_Per_Ingredient) for j in Total_Cals_Per_Ingredient]
-
-        # Amount of calories that needs to be added
-        # indivisible ingredients are ingnored (set to 0)
-        New_Calorie_Amount_Per_Ingredient = [Cals_To_Be_Added[index] * j for j in Factor_Per_Ingredient]
-        
-        # For loop that handles the remaining divisible ingredients
-        for index2, j in enumerate(Meal_List[n][index].ingredients):
-            if not j.divisible_by:
-                if j.calories == 0:
-                    Meal_List[n][index].ingredients[index2].amount *= 1 + Factor_Per_Ingredient[index2]
-                else:
-                    ###########Ingredient to be changed###########    ##################################Calculates the amount to be added##################################
-                    Meal_List[n][index].ingredients[index2].amount += int(New_Calorie_Amount_Per_Ingredient[index2] / Meal_List[n][index].ingredients[index2].calories * 100)
-
-def Adjust_All(Meal_List,Calories_Per_Day): 
-    for i in range(len(Meal_List)):
-        Adjust_Calories_Per_Day(Meal_List,i,Calories_Per_Day)
-
-
 class Settings_Screen(MDScreen):
 
     def __init__(self, *args, **kwargs):
@@ -1182,20 +1103,32 @@ class Ingredients_Screen(MDScreen):
             "Condiment":(.78,.69,.24,1),
             "Spice":(.95,.95,.99,1)
         }
-        self.refresh_and_sort_all_ingredients_list()
+        self.sort_value = 4               # default value (sorts by type) others should be 2, 5, 6, 7 (cals, fats, carbs, prots)
+        self.sort_order = True
+        self.filter_type = "All"
+        self.refresh_all_ingredients_list()
+
         
     def transition_to_meal_plan_screen(self):
         MDApp.get_running_app().root.ids.screen_manager.current = "Meal_Plan_Screen"
         MDApp.get_running_app().root.ids.screen_manager.transition.direction = "right"
         MDApp.get_running_app().root.load_active_profile()
 
-    def refresh_and_sort_all_ingredients_list(self): # this should only be called when an ingredient is added or deleted or edited and on start to sort the list
+    def refresh_all_ingredients_list(self): # this should only be called when an ingredient is added or deleted or edited and on start to sort the list
         s = Session()
-        self.all_ingredient_id_and_stats_list_sorted = [i for i in sorted([(i.id,i.name,i.calories,i.unit,i.type) for i in s.query(Ingredient).all()],key=lambda x: x[4])]
+        self.all_ingredient_id_and_stats_list = [[i.id,i.name,i.calories,i.unit,i.type,i.fats,i.carbohydrates,i.proteins] for i in s.query(Ingredient).all()]
         s.close()
         self.refresh_internal_list()
 
     def refresh_internal_list(self):
+        if self.filter_type == "All":
+            self.all_ingredient_id_and_stats_list_filtered = self.all_ingredient_id_and_stats_list
+        else:
+            self.all_ingredient_id_and_stats_list_filtered = list(filter(lambda x: x[4] == self.filter_type, self.all_ingredient_id_and_stats_list))
+        self.display_ingredient_id_and_stats_list = sorted(self.all_ingredient_id_and_stats_list_filtered,key = lambda x: x[self.sort_value],reverse = self.sort_order)
+        self.refresh_display_list() if self.ids else None
+
+    def refresh_internal_list_old(self):
         self.ing_type = self.ids.filter.text if self.ids else "All"
         if self.ing_type == "All":
             self.display_ingredient_id_and_stats_list = self.all_ingredient_id_and_stats_list_sorted
@@ -1214,7 +1147,7 @@ class Ingredients_Screen(MDScreen):
                 Item = ThreeLineAvatarIconObjectListItem(
                     ingredient_id=i[0],
                     text=i[1],
-                    secondary_text=f"{i[2]} kcals",
+                    secondary_text=f"{i[2]} kcals" if self.sort_value == 2 or self.sort_value == 4 else f"{i[5]} grams of fat" if self.sort_value == 5 else f"{i[6]} grams of carbohydrates" if self.sort_value == 6 else f"{i[7]} grams of protein",
                     tertiary_text=f"per {'100' if i[3] =='gram' or i[3] =='ml' else ''} {i[3]}{'s' if i[3] == 'gram' or i[3] == 'ml' else ''}",
                     on_release=self.open_ingredient_options_dialog,
                 )
@@ -1255,17 +1188,156 @@ class Ingredients_Screen(MDScreen):
         c.popup_base = self.popup_base
         self.popup_base.open()
 
+    def open_filter_menu(self):
+        c = Ingredient_List_Filter_Dialog()
+        self.popup_ingredient_list_filter = MDDialog(
+            title="Filter and Sort settings",
+            type="custom",
+            content_cls=c,
+            size_hint=(.9, None),
+            radius=[20, 7, 20, 7],
+            pos_hint={"center_x": .5, "center_y": .5}
+        )
+        c.logic = self
+        c.sort_value = self.sort_value # determines wether to sort by amount (3), calories (2), fats (7), carbohydrates (8) or proteins (9)
+        c.sort_order = self.sort_order # bool // False = ascending, True = descending
+        c.filter_type = self.filter_type # "Meat", "Fish", "Grains / Bread", "Dairy", "Vegetable", "Fruit", "Nuts / Seeds", "Oil / Fats", "Condiment", "Spice", "All"
+        c.popup_ingredient_list_filter = self.popup_ingredient_list_filter
+        c.set_initial_settings()
+        self.popup_ingredient_list_filter.open()
+
+
+class Ingredient_List_Filter_Dialog(MDBoxLayout):
+
+    def __init__(self, *args, **kwargs):
+        super(Ingredient_List_Filter_Dialog, self).__init__(*args, **kwargs)
+        self.sort_value = 4 # 4 corresponds to type by default
+        self.sort_order = True # corresponds to the sort reverse attribute (high to low, low to high) # what is what I havent determined yet
+        self.filter_type = "All"
+        self.ing_icon_dict = {
+            "All":"filter-variant",
+            "Meat":"food-steak",
+            "Fish":"fish",
+            "Grains / Bread":"bread-slice-outline",
+            "Dairy":"cheese",
+            "Vegetable":"carrot",
+            "Fruit":"food-apple-outline",
+            "Nuts / Seeds":"peanut",
+            "Oil / Fats":"bottle-tonic",
+            "Condiment":"soy-sauce",
+            "Spice":"shaker-outline"
+        }
+        self.ing_icon_color_dict = {
+            "All":(1,1,1,1),
+            "Meat":(.39,.24,.04,1),
+            "Fish":(1,.61,.39,1),
+            "Grains / Bread":(1,.67,.35,1),
+            "Dairy":(1,.78,.24,1),
+            "Vegetable":(1,.55,.1,1),
+            "Fruit":(.9,.16,0,1),
+            "Nuts / Seeds":(.78,.53,0,1),
+            "Oil / Fats":(.96,.75,0,1),
+            "Condiment":(.78,.69,.24,1),
+            "Spice":(.95,.95,.99,1)
+        }
+    
+    def set_initial_settings(self):
+        if self.sort_value == 2:
+            self.ids.sort_by_calories.active = True
+            self.ids.sort_by_calories_label.text_color = (1,1,1,1)
+        elif self.sort_value == 5:
+            self.ids.sort_by_fats.active = True
+            self.ids.sort_by_fats_label.text_color = (1,1,1,1)
+        elif self.sort_value == 6:
+            self.ids.sort_by_carbohydrates.active = True
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,1)
+        elif self.sort_value == 7:
+            self.ids.sort_by_proteins.active = True
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,1)
+        if self.sort_order:
+            self.ids.sorting_direction.icon = "sort-descending"
+            self.ids.sort_order_label.text = "High to Low"
+        else:
+            self.ids.sorting_direction.icon = "sort-ascending"
+            self.ids.sort_order_label.text = "Low to High"
+        self.ids.ingredient_type_filter.icon = self.ing_icon_dict[self.filter_type]
+        self.ids.ingredient_type_filter.text_color = self.ing_icon_color_dict[self.filter_type]
+
+    def cancel(self):
+        self.popup_ingredient_list_filter.dismiss()
+
+    def check_calories(self,instance,value):
+        if value:
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_calories_label.text_color = (1,1,1,1)
+            self.sort_value = 2
+        else:
+            self.sort_value = 4
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+
+    def check_fats(self,instance,value):
+        if value:
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats_label.text_color = (1,1,1,1)
+            self.sort_value = 5
+        else:
+            self.sort_value = 4
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+    
+    def check_carbohydrates(self,instance,value):
+        if value:
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,1)
+            self.sort_value = 6
+        else:
+            self.sort_value = 4
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+
+    def check_proteins(self,instance,value):
+        if value:
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,1)
+            self.sort_value = 7
+        else:
+            self.sort_value = 4
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+
+    def set_sort_order(self):
+        self.ids.sorting_direction.icon = "sort-ascending" if self.ids.sorting_direction.icon == "sort-descending" else "sort-descending"
+        self.sort_order = False if self.ids.sorting_direction.icon == "sort-ascending" else True
+        self.ids.sort_order_label.text = "High to Low" if self.sort_order else "Low to High"
+
     def open_filter_dropdown(self):
         self.choices_filter = [
             {
-                "viewclass": "OneLineIconListItem",
+                "viewclass": "OneLineAvatarIconListItem",
                 "text": "All",
                 "icon":"filter-variant",
                 "height": dp(56),
                 "on_release": lambda x="filter-variant",y="All": self.set_filter_icon(x,y)
             },
             {
-                "viewclass": "OneLineIconListItem",
+                "viewclass": "OneLineAvatarIconListItem",
                 "text": "Meat",
                 "icon": "food-steak",
                 "height": dp(56),
@@ -1336,19 +1408,29 @@ class Ingredients_Screen(MDScreen):
             },
         ]
         self.menu_list_type = MDDropdownMenu(
-            caller=self.ids.filter,
+            caller=self.ids.ingredient_type_filter,
             items=self.choices_filter,
             position="auto",
             width_mult=4
         )
         self.menu_list_type.open()
 
-    def set_filter_icon(self, icon, text):
-        self.ids.filter.icon = icon
-        self.ids.filter.text_color = self.ing_icon_color_dict[text]
-        self.ids.filter.text = text
-        self.refresh_internal_list()
+    def set_filter_icon(self, icon, ing_type):
+        self.ids.ingredient_type_filter.icon = icon
+        self.ids.ingredient_type_filter.text_color = self.ing_icon_color_dict[ing_type]
+        self.filter_type = ing_type
         self.menu_list_type.dismiss()
+
+    def apply_filter(self):
+        ic("apply filter")
+        self.logic.sort_value = self.sort_value
+        self.logic.sort_order = self.sort_order
+        self.logic.filter_type = self.filter_type
+        self.logic.refresh_internal_list()
+        self.popup_ingredient_list_filter.dismiss()
+        ic(self.sort_order)
+        ic(self.sort_value)
+        ic(self.filter_type)
 
 class Add_Ingredient_Dialog(MDBoxLayout):
     
@@ -1647,7 +1729,7 @@ class Add_Ingredient_Dialog(MDBoxLayout):
             s.add(new_ingredient)
             s.commit()
             s.close()
-            self.ing_screen.refresh_and_sort_all_ingredients_list()
+            self.ing_screen.refresh_all_ingredients_list()
             self.popup_base.dismiss()
         else:
             s.close()
@@ -1688,7 +1770,7 @@ class Ingredient_Already_Exists_Dialog(MDBoxLayout):
         self.ing.divisible_by = self.logic.add_ing_divisibility.value
         s.commit()
         s.close()
-        self.ing_screen.refresh_and_sort_all_ingredients_list()
+        self.ing_screen.refresh_all_ingredients_list()
         self.ingredient_already_exists_dialog.dismiss()
         self.popup_base.dismiss()
 
@@ -1787,7 +1869,7 @@ class Delete_Ingredient_Dialog(MDBoxLayout):
         s.delete(self.ing)
         s.commit()
         s.close()
-        self.ing_screen.refresh_and_sort_all_ingredients_list()
+        self.ing_screen.refresh_all_ingredients_list()
         self.popup_layer2_delete.dismiss()
         self.popup_base.dismiss()
 
@@ -2078,7 +2160,7 @@ class Edit_Ingredient_Dialog(MDBoxLayout):
         self.ing.divisible_by = self.ids.update_ing_divisibility.value
         s.commit()
         s.close()
-        self.ing_screen.refresh_and_sort_all_ingredients_list()
+        self.ing_screen.refresh_all_ingredients_list()
         self.popup_layer2_edit.dismiss()
         self.popup_base.dismiss()
 
@@ -2124,20 +2206,6 @@ class Meals_Screen(MDScreen):
         MDApp.get_running_app().root.ids.screen_manager.current = "Meal_Plan_Screen"
         MDApp.get_running_app().root.ids.screen_manager.transition.direction = "right"
         MDApp.get_running_app().root.load_active_profile()
-
-    # def expand_collapse(self,btn):
-    #     if btn.collapsed:
-    #         btn.icon = "chevron-up"
-    #         self.ids.layout.size_hint_y = 1
-    #         self.ids.layout.height = self.ids.layout.minimum_height
-    #         btn.pos_hint = {"top":.15}
-    #         btn.collapsed = False
-    #     else:
-    #         btn.icon = "chevron-double-down"
-    #         self.ids.layout.size_hint_y = None
-    #         self.ids.layout.height = 0
-    #         btn.pos_hint = {"top":.8}
-    #         btn.collapsed = True
 
     def open_filter_dialog(self):
         c = Filter_Dialog()
@@ -2221,7 +2289,7 @@ class Meals_Screen(MDScreen):
                 ).all()
         s.close()
         ic(self.meal_list)
-
+    
     def refresh_display_list(self):
         search = self.ids.meal_search.text
         self.ids.meals_display_list.clear_widgets()
@@ -2466,7 +2534,7 @@ class Meal_Options_Dialog(MDBoxLayout):
         self.screen_manager.add_widget(
             Display_Meal_Screen(meal_id=self.meal.id)
         )
-        self.screen_manager.get_screen("Display_Meal_Screen").ids.meal_name.text = self.meal.name
+        self.screen_manager.get_screen("Display_Meal_Screen").ids.top_app_bar.title = self.meal.name
         self.screen_manager.get_screen("Display_Meal_Screen").refresh_internal_ingredient_list()
         self.screen_manager.get_screen("Display_Meal_Screen").refresh_display_ingredient_list()
         self.screen_manager.current = "Display_Meal_Screen"
@@ -2528,6 +2596,12 @@ class Display_Meal_Screen(MDScreen):
         self.asc_obj_id_list = [i.id for i in s.query(Association).filter(Association.meal_id == self.meal_id).all()]
         self.all_ingredient_id_list = [i.id for i in s.query(Ingredient).all()]
         s.close()
+
+    def transition_to_meal_plan_screen(self):
+        MDApp.get_running_app().root.ids.meals_screen.refresh_internal_list()
+        MDApp.get_running_app().root.ids.meals_screen.refresh_display_list()
+        MDApp.get_running_app().root.ids.screen_manager.current = "Meals_Screen"
+        MDApp.get_running_app().root.ids.screen_manager.transition.direction = "right"
 
     def remove_display_screen(self):
         self.screen_manager.remove_widget(self.screen_manager.current_screen)
@@ -2596,7 +2670,7 @@ class Display_Meal_Screen(MDScreen):
             content_cls=c,
             radius=[20, 7, 20, 7]
         )
-        c.refresh_and_sort_all_ingredients_list()
+        c.refresh_all_ingredients_list()
         c.display_meal_screen = self
         c.popup_base_add_ing = self.popup_base_add_ing
         self.popup_base_add_ing.open()
@@ -2637,6 +2711,9 @@ class Add_Meal_Ingredient_Dialog(MDBoxLayout):
             "Condiment":(.78,.69,.24,1),
             "Spice":(.95,.95,.99,1)
         }
+        self.sort_value = 5             # default value (sorts by type) others should be 2, 5, 6, 7 (cals, fats, carbs, prots)
+        self.sort_order = True
+        self.filter_type = "All"
 
     def cancel(self):
         self.popup_base_add_ing.dismiss()
@@ -2736,19 +2813,49 @@ class Add_Meal_Ingredient_Dialog(MDBoxLayout):
         self.refresh_internal_list()
         self.menu_list_type.dismiss()
 
-    def refresh_and_sort_all_ingredients_list(self): # this should only be called when an ingredient is added or deleted and on initialization to sort the list
+    def open_filter_menu(self):
+        c = Ingredient_List_Filter_For_Add_Ing_To_Meal_Dialog()
+        self.popup_ingredient_list_filter_for_add_ing_to_meal = MDDialog(
+            title="Filter and Sort settings",
+            type="custom",
+            content_cls=c,
+            size_hint=(.9, None),
+            radius=[20, 7, 20, 7],
+            pos_hint={"center_x": .5, "center_y": .5}
+        )
+        c.logic = self
+        c.sort_value = self.sort_value
+        c.sort_order = self.sort_order # bool // False = ascending, True = descending
+        c.filter_type = self.filter_type # "Meat", "Fish", "Grains / Bread", "Dairy", "Vegetable", "Fruit", "Nuts / Seeds", "Oil / Fats", "Condiment", "Spice", "All"
+        c.popup_ingredient_list_filter_for_add_ing_to_meal = self.popup_ingredient_list_filter_for_add_ing_to_meal
+        c.set_initial_settings()
+        self.popup_ingredient_list_filter_for_add_ing_to_meal.open()
+    # def refresh_all_ingredients_list(self): # this should only be called when an ingredient is added or deleted and on initialization to sort the list
+    #     s = Session()
+    #     self.all_ingredient_id_and_stats_list_sorted = [i for i in sorted([(i.id,i.name,i.unit,i.divisible_by,i.calories,i.type) for i in s.query(Ingredient).all()],key=lambda x: x[5])]
+    #     s.close()
+    #     self.refresh_internal_list()
+
+    # def refresh_internal_list(self):
+    #     self.ing_type = self.ids.filter.text if self.ids else "All"
+    #     if self.ing_type == "All":
+    #         self.display_ingredient_id_and_stats_list = self.all_ingredient_id_and_stats_list_sorted
+    #     else:
+    #         self.display_ingredient_id_and_stats_list = list(filter(lambda x: x[5] == self.ing_type,self.all_ingredient_id_and_stats_list_sorted))
+    #     self.refresh_display_list()
+    def refresh_all_ingredients_list(self): # this should only be called when an ingredient is added or deleted or edited and on start to sort the list
         s = Session()
-        self.all_ingredient_id_and_stats_list_sorted = [i for i in sorted([(i.id,i.name,i.unit,i.divisible_by,i.calories,i.type) for i in s.query(Ingredient).all()],key=lambda x: x[5])]
+        self.all_ingredient_id_and_stats_list = [[i.id,i.name,i.unit,i.divisible_by,i.calories,i.type,i.fats,i.carbohydrates,i.proteins] for i in s.query(Ingredient).all()]
         s.close()
         self.refresh_internal_list()
 
     def refresh_internal_list(self):
-        self.ing_type = self.ids.filter.text if self.ids else "All"
-        if self.ing_type == "All":
-            self.display_ingredient_id_and_stats_list = self.all_ingredient_id_and_stats_list_sorted
+        if self.filter_type == "All":
+            self.all_ingredient_id_and_stats_list_filtered = self.all_ingredient_id_and_stats_list
         else:
-            self.display_ingredient_id_and_stats_list = list(filter(lambda x: x[5] == self.ing_type,self.all_ingredient_id_and_stats_list_sorted))
-        self.refresh_display_list()
+            self.all_ingredient_id_and_stats_list_filtered = list(filter(lambda x: x[5] == self.filter_type, self.all_ingredient_id_and_stats_list))
+        self.display_ingredient_id_and_stats_list = sorted(self.all_ingredient_id_and_stats_list_filtered,key = lambda x: x[self.sort_value],reverse = self.sort_order)
+        self.refresh_display_list() if self.ids else None
 
     def refresh_display_list(self):
         self.ing_search = self.ids.ing_search.text
@@ -2761,7 +2868,7 @@ class Add_Meal_Ingredient_Dialog(MDBoxLayout):
                     text=i[1],
                     ing_unit=i[2],
                     divisible_by=i[3],
-                    secondary_text=f"{i[4]} kcals",
+                    secondary_text=f"{i[2]} kcals" if self.sort_value == 4 or self.sort_value == 5 else f"{i[6]} grams of fat" if self.sort_value == 6 else f"{i[7]} grams of carbohydrates" if self.sort_value == 7 else f"{i[8]} grams of protein",
                     tertiary_text=f"per {'100' if i[2] =='gram' or i[2] =='ml' else ''} {i[2]}{'s' if i[2] == 'gram' or i[2] == 'ml' else ''}",
                     on_release=self.open_ingredient_amount_input_dialog,
                 )
@@ -2870,6 +2977,228 @@ class Add_Meal_Ingredient_Dialog(MDBoxLayout):
                     c.refresh_stats()
                     c.confirm_button_check_validity()
                     self.popup_add_ing_piece_indivisible.open()
+
+class Ingredient_List_Filter_For_Add_Ing_To_Meal_Dialog(MDBoxLayout):
+
+    def __init__(self, *args, **kwargs):
+        super(Ingredient_List_Filter_For_Add_Ing_To_Meal_Dialog, self).__init__(*args, **kwargs)
+        self.ing_icon_dict = {
+            "All":"filter-variant",
+            "Meat":"food-steak",
+            "Fish":"fish",
+            "Grains / Bread":"bread-slice-outline",
+            "Dairy":"cheese",
+            "Vegetable":"carrot",
+            "Fruit":"food-apple-outline",
+            "Nuts / Seeds":"peanut",
+            "Oil / Fats":"bottle-tonic",
+            "Condiment":"soy-sauce",
+            "Spice":"shaker-outline"
+        }
+        self.ing_icon_color_dict = {
+            "All":(1,1,1,1),
+            "Meat":(.39,.24,.04,1),
+            "Fish":(1,.61,.39,1),
+            "Grains / Bread":(1,.67,.35,1),
+            "Dairy":(1,.78,.24,1),
+            "Vegetable":(1,.55,.1,1),
+            "Fruit":(.9,.16,0,1),
+            "Nuts / Seeds":(.78,.53,0,1),
+            "Oil / Fats":(.96,.75,0,1),
+            "Condiment":(.78,.69,.24,1),
+            "Spice":(.95,.95,.99,1)
+        }
+    
+    def set_initial_settings(self):
+        if self.sort_value == 4:
+            self.ids.sort_by_calories.active = True
+            self.ids.sort_by_calories_label.text_color = (1,1,1,1)
+        elif self.sort_value == 6:
+            self.ids.sort_by_fats.active = True
+            self.ids.sort_by_fats_label.text_color = (1,1,1,1)
+        elif self.sort_value == 7:
+            self.ids.sort_by_carbohydrates.active = True
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,1)
+        elif self.sort_value == 8:
+            self.ids.sort_by_proteins.active = True
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,1)
+        if self.sort_order:
+            self.ids.sorting_direction.icon = "sort-descending"
+            self.ids.sort_order_label.text = "High to Low"
+        else:
+            self.ids.sorting_direction.icon = "sort-ascending"
+            self.ids.sort_order_label.text = "Low to High"
+        self.ids.ingredient_type_filter.icon = self.ing_icon_dict[self.filter_type]
+        self.ids.ingredient_type_filter.text_color = self.ing_icon_color_dict[self.filter_type]
+
+    def cancel(self):
+        self.popup_ingredient_list_filter_for_add_ing_to_meal.dismiss()
+
+    def check_calories(self,instance,value):
+        if value:
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_calories_label.text_color = (1,1,1,1)
+            self.sort_value = 4
+        else:
+            self.sort_value = 5
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+
+    def check_fats(self,instance,value):
+        if value:
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats_label.text_color = (1,1,1,1)
+            self.sort_value = 6
+        else:
+            self.sort_value = 5
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+    
+    def check_carbohydrates(self,instance,value):
+        if value:
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,1)
+            self.sort_value = 7
+        else:
+            self.sort_value = 5
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+
+    def check_proteins(self,instance,value):
+        if value:
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,1)
+            self.sort_value = 8
+        else:
+            self.sort_value = 5
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+
+    def set_sort_order(self):
+        self.ids.sorting_direction.icon = "sort-ascending" if self.ids.sorting_direction.icon == "sort-descending" else "sort-descending"
+        self.sort_order = False if self.ids.sorting_direction.icon == "sort-ascending" else True
+        self.ids.sort_order_label.text = "High to Low" if self.sort_order else "Low to High"
+
+    def open_filter_dropdown(self):
+        self.choices_filter = [
+            {
+                "viewclass": "OneLineAvatarIconListItem",
+                "text": "All",
+                "icon":"filter-variant",
+                "height": dp(56),
+                "on_release": lambda x="filter-variant",y="All": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineAvatarIconListItem",
+                "text": "Meat",
+                "icon": "food-steak",
+                "height": dp(56),
+                "on_release": lambda x="food-steak",y="Meat": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Fish",
+                "icon": "fish",
+                "height": dp(56),
+                "on_release": lambda x="fish",y="Fish": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Grains / Bread",
+                "icon": "bread-slice-outline",
+                "height": dp(56),
+                "on_release": lambda x="bread-slice-outline",y="Grains / Bread": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Dairy",
+                "icon": "cheese",
+                "height": dp(56),
+                "on_release": lambda x="cheese",y="Dairy": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Vegetable",
+                "icon": "carrot",
+                "height": dp(56),
+                "on_release": lambda x="carrot",y="Vegetable": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Fruit",
+                "icon": "food-apple-outline",
+                "height": dp(56),
+                "on_release": lambda x="food-apple-outline",y="Fruit": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Nuts / Seeds",
+                "icon": "peanut",
+                "height": dp(56),
+                "on_release": lambda x="peanut",y="Nuts / Seeds": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Oil / Fats",
+                "icon": "bottle-tonic",
+                "height": dp(56),
+                "on_release": lambda x="bottle-tonic",y="Oil / Fats": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Condiment",
+                "icon": "soy-sauce",
+                "height": dp(56),
+                "on_release": lambda x="soy-sauce",y="Condiment": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Spice",
+                "icon": "shaker-outline",
+                "height": dp(56),
+                "on_release": lambda x="shaker-outline",y="Spice": self.set_filter_icon(x,y)
+            },
+        ]
+        self.menu_list_type = MDDropdownMenu(
+            caller=self.ids.ingredient_type_filter,
+            items=self.choices_filter,
+            position="auto",
+            width_mult=4
+        )
+        self.menu_list_type.open()
+
+    def set_filter_icon(self, icon, ing_type):
+        self.ids.ingredient_type_filter.icon = icon
+        self.ids.ingredient_type_filter.text_color = self.ing_icon_color_dict[ing_type]
+        self.filter_type = ing_type
+        self.menu_list_type.dismiss()
+
+    def apply_filter(self):
+        ic("apply filter")
+        self.logic.sort_value = self.sort_value
+        self.logic.sort_order = self.sort_order
+        self.logic.filter_type = self.filter_type
+        self.logic.refresh_internal_list()
+        self.popup_ingredient_list_filter_for_add_ing_to_meal.dismiss()
+        ic(self.sort_order)
+        ic(self.sort_value)
+        ic(self.filter_type)
 
 class Ingredient_Is_Already_In_Meal_Dialog(MDBoxLayout):
 
@@ -3350,24 +3679,10 @@ class Delete_Meal_Ingredient_Dialog(MDBoxLayout):
         self.display_meal_screen.refresh_internal_ingredient_list()
         self.display_meal_screen.refresh_display_ingredient_list()
 
-# add_meal_to_database("Test",True,True,True,True,True,True)
-# add_ingredient_to_meal("Test","Salami",100,1)
-# add_ingredient_to_meal("Test","Salami Sticks",100,1)
-# add_ingredient_to_meal("Test","Gouda",100,1)
-
 s = Session()   
 for i in s.query(Active).all():
     print(i) # Should only be one
 
-# for i in s.query(Settings).all():
-#     print
-#     (   
-#         i.name,
-#         i.breakfast,
-#         i.lunch,
-#         i.dinner,
-#         i.snack
-#     )
 s.close()
 
 class Meal_Plan_Item(MDBoxLayout):
@@ -3440,10 +3755,12 @@ class Meal_Plan_Item(MDBoxLayout):
     
     def show_sweet_savory(self):
         ic("sweet_savory")
+        ic(self.meal_plan_screen.meal_id_and_ingredient_id__unit__amount_list)
     
     def show_hot_cold(self):
         ic("hot_cold")
-    
+
+
     def open_swap_options_dialog(self):
         ic("swap")
         c = Swap_Options_Dialog(meal_id=self.meal_id,
@@ -3457,7 +3774,6 @@ class Meal_Plan_Item(MDBoxLayout):
         c.logic = self
         c.popup_base = self.popup_base
         self.popup_base.open()
-
 
 class Swap_Options_Dialog(MDBoxLayout):
 
@@ -3498,11 +3814,6 @@ class Swap_Options_Dialog(MDBoxLayout):
     def select_new_meal_manuel(self):
         ic("manuel")
 
-## PICK UP: incorporate changes made in the adjustment function into the database: Things to look out for are: 1. generate meal plan function should make a list of anything neccessary not just id,
-                                                                                                            #  2. load meal plan should deal with list made in point 1.
-                                                                                                            #  3. meal_plan_list item should be refactored to be able to deal with these changes on load
-                                                                                                            #  4. database class for the meal_plan should be updated to the complete list
-
 class Meal_Plan_Screen(MDScreen):
 
     def __init__(self, *args, **kwargs):
@@ -3511,24 +3822,39 @@ class Meal_Plan_Screen(MDScreen):
         active_meal_plan = s.get(Meal_Plan,s.query(Active).first().meal_plan_id)
         if active_meal_plan:
             self.breakfast = active_meal_plan.breakfast
+            self.breakfast_percentage = active_meal_plan.breakfast_percentage
             self.lunch = active_meal_plan.lunch
+            self.lunch_percentage = active_meal_plan.lunch_percentage
             self.snack = active_meal_plan.snack
+            self.snack_percentage = active_meal_plan.snack_percentage
             self.dinner = active_meal_plan.dinner
+            self.dinner_percentage = active_meal_plan.dinner_percentage
             self.day_range = active_meal_plan.day_range
             self.meal_id_and_ingredient_id__unit__amount_list = eval(active_meal_plan.meal_id_and_ingredient_id__unit__amount_list)
             self.adjusted = active_meal_plan.adjusted
+            self.shopping_list = eval(active_meal_plan.shopping_list)
             self.active_meal_plan_id = active_meal_plan.id
             self.active_meal_plan_name = active_meal_plan.name
         else:
             self.breakfast = False
+            self.breakfast_percentage = 0
             self.lunch = False
+            self.lunch_percentage = 0
             self.snack = False
+            self.snack_percentage = 0
             self.dinner = False
+            self.dinner_percentage = 0
             self.day_range = 1
             self.meal_id_and_ingredient_id__unit__amount_list = None
+            self.shopping_list = []
             self.adjusted = False
             self.active_meal_plan_id = None
         s.close()
+        self.erase_meal_plan_button_info_opened = False
+        self.save_meal_plan_button_info_opened = False
+        self.display_saved_meal_plans_button_info_opened = False
+        self.adjust_calories_button_info_opened = False        
+        self.event = False
 
     def open_meal_plan_settings(self):
         c = Meal_Plan_Settings_Dialog()
@@ -3541,34 +3867,45 @@ class Meal_Plan_Screen(MDScreen):
             radius=[20, 7, 20, 7]
         )
         c.popup_meal_plan_settings = self.popup_meal_plan_settings
-        s = Session()
         if self.active_meal_plan_id:
+            s = Session()
             active_meal_plan_settings = s.get(Meal_Plan,s.query(Active).first().meal_plan_id)
             c.ids.breakfast.active = active_meal_plan_settings.breakfast
             c.ids.lunch.active = active_meal_plan_settings.lunch
             c.ids.dinner.active = active_meal_plan_settings.dinner
             c.ids.snack.active = active_meal_plan_settings.snack
+            c.set_percentage_availability_all()
+            c.ids.breakfast_percent_label.percentage = active_meal_plan_settings.breakfast_percentage
+            c.ids.lunch_percent_label.percentage = active_meal_plan_settings.lunch_percentage
+            c.ids.dinner_percent_label.percentage = active_meal_plan_settings.dinner_percentage
+            c.ids.snack_percent_label.percentage = active_meal_plan_settings.snack_percentage
             c.ids.day_range.number = active_meal_plan_settings.day_range
-            c.ids.decrement_button.disabled = True if active_meal_plan_settings.day_range <= 1 else False
+            c.ids.day_range_decrement_button.disabled = True if active_meal_plan_settings.day_range <= 1 else False
+            s.close()   
         else:
             c.ids.breakfast.active = self.breakfast
             c.ids.lunch.active = self.lunch
-            c.ids.dinner.active = self.snack
-            c.ids.snack.active = self.dinner
+            c.ids.dinner.active = self.dinner
+            c.ids.snack.active = self.snack
+            c.set_percentage_availability_all()
+            c.ids.breakfast_percent_label.percentage = self.breakfast_percentage
+            c.ids.lunch_percent_label.percentage = self.lunch_percentage
+            c.ids.dinner_percent_label.percentage = self.dinner_percentage
+            c.ids.snack_percent_label.percentage = self.snack_percentage
             c.ids.day_range.number = self.day_range
+            c.ids.day_range_decrement_button.disabled = True if self.day_range <= 1 else False
         c.Meal_Plan_Screen = self
-        s.close()
         self.popup_meal_plan_settings.open()
 
     def set_page_icon_validity_status(self):
         if self.day_range - 1 == self.ids.meal_plan.page:
-            self.ids.meal_plan_title.ids.right_actions.children[0].text_color = (0,0,0,.25)
+            self.ids.increment_page_button.text_color = (0,0,0,.25)
         else:
-            self.ids.meal_plan_title.ids.right_actions.children[0].text_color = (0,0,0,1)
+            self.ids.increment_page_button.text_color = (0,0,0,1)
         if self.ids.meal_plan.page == 0:
-            self.ids.meal_plan_title.ids.left_actions.children[0].text_color = (0,0,0,.25)
+            self.ids.decrement_page_button.text_color = (0,0,0,.25)
         else:
-            self.ids.meal_plan_title.ids.left_actions.children[0].text_color = (0,0,0,1)
+            self.ids.decrement_page_button.text_color = (0,0,0,1)
 
     def increment_page(self):
         if self.day_range - 1 > self.ids.meal_plan.page:
@@ -3586,77 +3923,179 @@ class Meal_Plan_Screen(MDScreen):
         else:
             return False
 
+    def test_touch_down(self, instance, touch):
+        ic("test")
+        ic(instance)
+        if instance.collide_point(*touch.pos):
+            instance.event = Clock.schedule_once(lambda dt: self.test_show_eraser_button(instance), 1)
+
+    def set_opened_infos_to_false(self,identifier):
+        if identifier == "eraser":
+            self.erase_meal_plan_button_info_opened = False
+        elif identifier == "content-save-outline":
+            self.save_meal_plan_button_info_opened = False
+        elif identifier == "folder-open-outline":
+            self.display_saved_meal_plans_button_info_opened = False
+        elif identifier == "adjust":
+            self.adjust_calories_button_info_opened = False
+        ic(self.display_saved_meal_plans_button_info_opened)
+
+    def test_touch_up(self, instance, touch):
+        try:
+            if instance.collide_point(*touch.pos):
+                instance.event.cancel()
+                ic("touch up")
+                # ic(instance.icon)
+                # ic(instance.event)
+                ic(self.display_saved_meal_plans_button_info_opened)
+                if instance.icon == "eraser":
+                    ic(self.erase_meal_plan_button_info_opened)
+                    if self.erase_meal_plan_button_info_opened:
+                        Clock.schedule_once(lambda dt: self.set_opened_infos_to_false("eraser"), 0)
+                        self.erase_meal_plan_button_info.dismiss()
+                elif instance.icon == "content-save-outline":
+                    if self.save_meal_plan_button_info_opened:
+                        Clock.schedule_once(lambda dt: self.set_opened_infos_to_false("content-save-outline"), 0)
+                        self.save_meal_plan_button_info.dismiss()
+                elif instance.icon == "folder-open-outline":
+                    if self.display_saved_meal_plans_button_info_opened:
+                        Clock.schedule_once(lambda dt: self.set_opened_infos_to_false("folder-open-outline"), 0)
+                        self.display_saved_meal_plans_button_info.dismiss()
+                elif instance.icon == "adjust":
+                    if self.adjust_calories_button_info_opened:
+                        Clock.schedule_once(lambda dt: self.set_opened_infos_to_false("adjust"), 0)
+                        self.adjust_calories_button_info.dismiss()
+        except AttributeError:
+            pass
+
+    def test_show_eraser_button(self, instance):
+        ic("test")
+        icon = instance.icon
+        ic(icon)
+        instance.event.cancel()
+        self.erase_meal_plan_button_info = MDDropdownMenu(
+            caller=self.ids.erase_meal_plan_button,
+            items=[
+                {
+                    "viewclass": "MDLabel",
+                    "text": "Erases the current meal plan"
+                }
+            ],
+            width_mult=4,
+            position="auto"
+        )
+        self.save_meal_plan_button_info = MDDropdownMenu(
+            caller=self.ids.save_meal_plan_button,
+            items=[
+                {
+                    "viewclass": "MDLabel",
+                    "text": "Saves the current meal plan or saves the changes"
+                }
+            ],
+            width_mult=4,
+            position="auto"
+        )
+        self.display_saved_meal_plans_button_info = MDDropdownMenu(
+            caller=self.ids.display_saved_meal_plans_button,
+            items=[
+                {
+                    "viewclass": "MDLabel",
+                    "text": "Displays saved meal plans to load or delete them"
+                }
+            ],
+            width_mult=4,
+            position="auto"
+
+        )
+        self.adjust_calories_button_info = MDDropdownMenu(
+            caller=self.ids.adjust_calories_button,
+            items=[
+                {
+                    "viewclass": "MDLabel",
+                    "text": "Adjusts the amount of calories in the meal plan according to your daily calorie goal"
+                }
+            ],
+            width_mult=4,
+            position="auto"
+        )
+        if icon == "eraser":
+            self.erase_meal_plan_button_info.open()
+            self.erase_meal_plan_button_info_opened = True
+        elif icon == "content-save-outline":
+            self.save_meal_plan_button_info.open()
+            self.save_meal_plan_button_info_opened = True
+        elif icon == "folder-open-outline":
+            self.display_saved_meal_plans_button_info.open()
+            self.display_saved_meal_plans_button_info_opened = True
+            ic(self.display_saved_meal_plans_button_info_opened)
+        elif icon == "adjust":
+            self.adjust_calories_button_info.open()
+            self.adjust_calories_button_info_opened = True
+
     def erase_meal_plan_and_save_meal_plan_button_check_validity(self):
         if self.ids.meal_plan.children:
-            self.ids.bottom_app_bar.ids.left_actions.children[3].text_color = (0,0,0,1)
-            self.ids.bottom_app_bar.ids.left_actions.children[2].text_color = (0,0,0,1)
+            self.ids.erase_meal_plan_button.text_color = (0,0,0,1)
+            self.ids.save_meal_plan_button.text_color = (0,0,0,1)
             return True
         else:
-            self.ids.bottom_app_bar.ids.left_actions.children[3].text_color = (0,0,0,.25)
-            self.ids.bottom_app_bar.ids.left_actions.children[2].text_color = (0,0,0,.25)
+            self.ids.erase_meal_plan_button.text_color = (0,0,0,.25)
+            self.ids.save_meal_plan_button.text_color = (0,0,0,.25)
             return False
+    
     def erase_meal_plan(self): # clears the current meal plan list and settings, doesnt delete it if it is already saved
         if self.erase_meal_plan_and_save_meal_plan_button_check_validity():
-            ic("delete_meal_plan")
-            self.ids.meal_plan.clear_widgets()
-            self.breakfast = False
-            self.lunch = False
-            self.snack = False
-            self.dinner = False
-            self.day_range = 1
-            self.meal_id_and_ingredient_id__unit__amount_list = None
-            self.adjusted = False
-            self.active_meal_plan_id = None
-            self.ids.meal_plan_title.title = "No current meal plan!"
-            s = Session()
-            s.query(Active).update({Active.meal_plan_id: None})
-            s.commit()
-            s.close()
-            self.adjust_calories_button_check_validity()
-            self.erase_meal_plan_and_save_meal_plan_button_check_validity()
-            self.set_page_icon_validity_status()
+            if not self.erase_meal_plan_button_info_opened:
+                ic("erase_meal_plan")
+                self.ids.meal_plan.clear_widgets()
+                self.meal_id_and_ingredient_id__unit__amount_list = None
+                self.shopping_list = []
+                MDApp.get_running_app().root.ids.shopping_list_screen.shopping_list = []
+                MDApp.get_running_app().root.ids.shopping_list_screen.clear_shopping_list_list()
+                self.adjusted = False
+                self.active_meal_plan_id = None
+                self.ids.current_meal_plan_display_name.text = "No current meal plan!"
+                s = Session()
+                s.query(Active).update({Active.meal_plan_id: None})
+                s.commit()
+                s.close()
+                self.adjust_calories_button_check_validity()
+                MDApp.get_running_app().root.ids.shopping_list_screen.clear_shopping_list_list()
+                self.erase_meal_plan_and_save_meal_plan_button_check_validity()
+                self.set_page_icon_validity_status()
 
     def open_save_meal_plan_options(self):
         if self.erase_meal_plan_and_save_meal_plan_button_check_validity():
-            if not self.active_meal_plan_id:
-                ic("save_meal_plan")
-                c = Save_Meal_Plan_Dialog() # gives option to save meal plan when no active meal plan
-                self.popup_base = MDDialog(
-                    title="Save Meal Plan",
-                    type="custom",
-                    size_hint=(.9, None),
-                    height=MDApp.get_running_app().root.height*.8,
-                    pos_hint={"center_x": .5, "center_y": .5},
-                    content_cls=c,
-                    radius=[20, 7, 20, 7]
-                )
-                c.popup_base = self.popup_base
-                c.breakfast = self.breakfast
-                c.lunch = self.lunch
-                c.snack = self.snack
-                c.dinner = self.dinner
-                c.day_range = self.day_range
-                c.meal_id_and_ingredient_id__unit__amount_list = self.meal_id_and_ingredient_id__unit__amount_list
-                c.adjusted = self.adjusted
-                self.popup_base.open()
-            else:
-                ic("save changes")
-                c = Save_Meal_Plan_Changes_Dialog() # gives option to save changes
-                self.popup_base = MDDialog(
-                    title="Save Changes?",
-                    type="custom",
-                    size_hint=(.9, None),
-                    pos_hint={"center_x": .5, "center_y": .5},
-                    content_cls=c,
-                    radius=[20, 7, 20, 7]
-                )
-                c.logic = self
-                c.popup_base = self.popup_base
-                self.popup_base.open()
+            if not self.save_meal_plan_button_info_opened:
+                if not self.active_meal_plan_id:
+                    ic("save_meal_plan")
+                    c = Save_Meal_Plan_Dialog() # gives option to save meal plan when no active meal plan
+                    self.popup_base = MDDialog(
+                        title="Save Meal Plan",
+                        type="custom",
+                        size_hint=(.9, None),
+                        height=MDApp.get_running_app().root.height*.8,
+                        pos_hint={"center_x": .5, "center_y": .5},
+                        content_cls=c,
+                        radius=[20, 7, 20, 7]
+                    )
+                    c.logic = self
+                    c.popup_base = self.popup_base
+                    self.popup_base.open()
+                else:
+                    ic("save changes")
+                    c = Save_Meal_Plan_Changes_Dialog() # gives option to save changes
+                    self.popup_base = MDDialog(
+                        title="Save Changes?",
+                        type="custom",
+                        size_hint=(.9, None),
+                        pos_hint={"center_x": .5, "center_y": .5},
+                        content_cls=c,
+                        radius=[20, 7, 20, 7]
+                    )
+                    c.logic = self
+                    c.popup_base = self.popup_base
+                    self.popup_base.open()
     
-    def set_meal_plan_settings(self):
-        pass
-
     def load_meal_plan_settings(self,meal_plan_id):
         ic()
         s = Session()
@@ -3667,17 +4106,18 @@ class Meal_Plan_Screen(MDScreen):
         self.dinner = meal_plan.dinner
         self.day_range = meal_plan.day_range
         self.meal_id_and_ingredient_id__unit__amount_list = eval(meal_plan.meal_id_and_ingredient_id__unit__amount_list)
+        self.shopping_list = eval(meal_plan.shopping_list)
         self.adjusted = meal_plan.adjusted
         self.active_meal_plan_name = meal_plan.name
         self.active_meal_plan_id = meal_plan.id
-        ic(self.meal_id_and_ingredient_id__unit__amount_list)
+        MDApp.get_running_app().root.ids.shopping_list_screen.shopping_list = self.shopping_list
         self.display_meal_plan()
         self.adjust_calories_button_check_validity()
     
     def display_meal_plan(self): # displays the current meal plan when one is active
         if self.active_meal_plan_id:
             self.ids.meal_plan.clear_widgets()
-            self.ids.meal_plan_title.title = f"{self.active_meal_plan_name} : Day {self.ids.meal_plan.page + 1}"
+            self.ids.current_meal_plan_display_name.text = f"{self.active_meal_plan_name} : Day {self.ids.meal_plan.page + 1}"
             self.meal_type_list = [i for i in ["Breakfast" if self.breakfast else None, "Lunch" if self.lunch else None, "Snack" if self.snack else None, "Dinner" if self.dinner else None] if i]
             ic(self.meal_type_list)	
             for index, i in enumerate(self.meal_id_and_ingredient_id__unit__amount_list):
@@ -3693,24 +4133,26 @@ class Meal_Plan_Screen(MDScreen):
                                                                                          ingredient_id__unit__amount_list=j[1]))
                     self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(25)))
                 self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(100)))
-        self.display_page_title()
+            self.display_page_title()
+            MDApp.get_running_app().root.ids.shopping_list_screen.refresh_internal_list()
 
     def open_load_meal_plan_dialog(self):
         ic("load_meal_plan")
-        c = Load_Meal_Plan_Dialog()
-        self.popup_base = MDDialog(
-            title="Load Meal Plan",
-            type="custom",
-            size_hint=(.9, None),
-            height=MDApp.get_running_app().root.height*.8,
-            pos_hint={"center_x": .5, "center_y": .5},
-            content_cls=c,
-            radius=[20, 7, 20, 7]
-        )
-        c.popup_base = self.popup_base
-        c.poup_base_logic = self
-        c.refresh_display_list()
-        self.popup_base.open()
+        if not self.display_saved_meal_plans_button_info_opened:
+            c = Load_Meal_Plan_Dialog()
+            self.popup_base = MDDialog(
+                title="Load Meal Plan",
+                type="custom",
+                size_hint=(.9, None),
+                height=MDApp.get_running_app().root.height*.8,
+                pos_hint={"center_x": .5, "center_y": .5},
+                content_cls=c,
+                radius=[20, 7, 20, 7]
+            )
+            c.popup_base = self.popup_base
+            c.poup_base_logic = self
+            c.refresh_display_list()
+            self.popup_base.open()
 
     def generate_meal_plan(self):
         if self.generate_button_check_validity():
@@ -3729,7 +4171,7 @@ class Meal_Plan_Screen(MDScreen):
                 if self.breakfast:
                     if self.breakfast_id_list:
                         breakfast_choice = rd.choice(self.breakfast_id_list)
-                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name] for j in s.query(Association).filter(Association.meal_id == breakfast_choice).all()]
+                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name,j.ingredient.type] for j in s.query(Association).filter(Association.meal_id == breakfast_choice).all()]
                         self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=breakfast_choice,
                                                                                              meal_type="Breakfast",
                                                                                              pos_in_list=(index,0),
@@ -3741,7 +4183,7 @@ class Meal_Plan_Screen(MDScreen):
                 if self.lunch:
                     if self.lunch_id_list:
                         lunch_choice = rd.choice(self.lunch_id_list)
-                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name] for j in s.query(Association).filter(Association.meal_id == lunch_choice).all()]
+                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name,j.ingredient.type] for j in s.query(Association).filter(Association.meal_id == lunch_choice).all()]
                         self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=lunch_choice,
                                                                                              meal_type="Lunch",
                                                                                              pos_in_list=(index,1 if self.breakfast else 0),
@@ -3753,7 +4195,7 @@ class Meal_Plan_Screen(MDScreen):
                 if self.snack:
                     if self.snack_id_list:
                         snack_choice = rd.choice(self.snack_id_list)
-                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name] for j in s.query(Association).filter(Association.meal_id == snack_choice).all()]
+                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name,j.ingredient.type] for j in s.query(Association).filter(Association.meal_id == snack_choice).all()]
                         self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=snack_choice,
                                                                                              meal_type="Snack",
                                                                                              pos_in_list=(index,sum([1 for i in (self.breakfast,self.lunch) if i])),
@@ -3765,7 +4207,7 @@ class Meal_Plan_Screen(MDScreen):
                 if self.dinner:
                     if self.dinner_id_list:
                         dinner_choice = rd.choice(self.dinner_id_list)
-                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name] for j in s.query(Association).filter(Association.meal_id == dinner_choice).all()]
+                        ingredient_id__unit__amount_list = [[j.ingredient_id,j.ingredient.unit,j.ingredient.calories,j.ingredient.fats,j.ingredient.carbohydrates,j.ingredient.proteins,j.amount_numerator,j.amount_denominator,j.ingredient.name,j.ingredient.type] for j in s.query(Association).filter(Association.meal_id == dinner_choice).all()]
                         self.ids.meal_plan.children[0].children[0].add_widget(Meal_Plan_Item(meal_id=dinner_choice,
                                                                                              meal_type="Dinner",
                                                                                              pos_in_list=(index,sum([1 for i in (self.breakfast,self.lunch,self.snack) if i])),
@@ -3774,63 +4216,57 @@ class Meal_Plan_Screen(MDScreen):
                     else:
                         ic("no dinners saved")
                     self.ids.meal_plan.children[0].children[0].add_widget(Widget(size_hint_y=None,height=dp(100)))
-            self.ids.meal_plan_title.title = "Day 1"
+            self.ids.current_meal_plan_display_name.text = "Day 1"
             ic(self.meal_id_and_ingredient_id__unit__amount_list)
             self.adjusted = False
             self.adjust_calories_button_check_validity()
             self.erase_meal_plan_and_save_meal_plan_button_check_validity()
             self.set_page_icon_validity_status()
             self.display_page_title()
+            self.generate_shopping_list()
+            MDApp.get_running_app().root.ids.shopping_list_screen.refresh_internal_list()
 
     def adjust_calories_button_check_validity(self):
         if not self.adjusted and self.ids.meal_plan.children:
-            self.ids.bottom_app_bar.ids.left_actions.children[0].text_color = (0,0,0,1)
+            self.ids.adjust_calories_button.text_color = (0,0,0,1)
             return True
         else:
-            self.ids.bottom_app_bar.ids.left_actions.children[0].text_color = (0,0,0,.25)
+            self.ids.adjust_calories_button.text_color = (0,0,0,.25)
             return False
 
     def adjust_calories(self):
         ic("adjust_calories")
-        # ic(self.day_range)
-        # after adjusting the plan should be tagged as adjusted and this function should not be executed again !
-        # spices should maybe be handled seperately as to prevent them from being 0, maybe put in a lower bound for the calorie factor for them to not be processed! 
-        if self.adjust_calories_button_check_validity():
+        if self.adjust_calories_button_check_validity() and not self.adjust_calories_button_info_opened:
             if MDApp.get_running_app().root.ids.settings_screen.ids.calories_per_day.text != "":
-                calorie_goal = float(MDApp.get_running_app().root.ids.settings_screen.ids.calories_per_day.text) # just a placeholder for testing purposes, should later be changed to the tdee value calculated in the settings
+                calorie_goal = float(MDApp.get_running_app().root.ids.settings_screen.ids.calories_per_day.text)
                 below = True
                 for i in range(self.day_range)[::-1]: # one loop = one day # Backwards to keep the order correct cause kivy iterates backwards over the children by default
                     meal_plan_item_list = [j for j in self.meal_plan.children[i].children[0].children[::-1] if isinstance(j, Meal_Plan_Item)] # j are the boxlayouts that hold the meal data # helper variable for later !
                     calories_per_meal = [j.meal_calories for j in meal_plan_item_list] 
                     current_calories_per_day = sum(calories_per_meal)
                     calorie_factor_per_meal_per_day = [j/current_calories_per_day for j in calories_per_meal] # how much each meal contributes to the total
-                    calorie_factor_goal_per_meal = [.2,.3,.2,.3] # how each meal should make up for in calories, supposed to be adjustable in the settings ######## NEEDS TO BE ADDED TO THE SETTINGS
+                    calorie_factor_goal_per_meal = [i for i in [
+                        self.breakfast_percentage/100,
+                        self.lunch_percentage/100,
+                        self.snack_percentage/100,
+                        self.dinner_percentage/100] if i != 0] # how each meal should make up for in calories, supposed to be adjustable in the settings ######## NEEDS TO BE ADDED TO THE SETTINGS
                     calorie_goal_per_meal = [j*calorie_goal for j in calorie_factor_goal_per_meal]
                     ΔCals_for_current_meal = [j-calories_per_meal[index] for index, j in enumerate(calorie_goal_per_meal)]
                     ΔCals = calorie_goal - current_calories_per_day # number of calories that needs to be adjusted for
-                    ΔCals_for_current_meal2 = [ΔCals * j for j in calorie_factor_per_meal_per_day] # how many calories to add to each meal
-                    ic(ΔCals_for_current_meal)
+                    # ΔCals_for_current_meal2 = [ΔCals * j for j in calorie_factor_per_meal_per_day] # how many calories to add to each meal
                     for index, j in enumerate(ΔCals_for_current_meal): # loop responsible for adjusting each meal individually this loop handles the divisible_by and indivisible ones in the first half and the others further down
                         calories_per_ingredient = [k[2]*k[6]/k[7] for k in meal_plan_item_list[index].ingredient_id__unit__amount_list]
-                        ic(j)
                         calorie_factor_per_ingredient = [k[2]*k[6]/k[7]/sum(calories_per_ingredient) for k in (meal_plan_item_list[index].ingredient_id__unit__amount_list)] # the unit might not be neccessary, the same condition can be checked with the denominator value !!!
-                        ic(calorie_factor_per_ingredient)
                         numerator_amount_to_add_per_ingredient = [(m.floor(j*calorie_factor_per_ingredient[index2]/(k[2]/k[7])) if below else m.ceil(j*calorie_factor_per_ingredient[index2]/(k[2]/k[7]))) if abs(j*calorie_factor_per_ingredient[index2]) > (k[2]/k[7]) else 0 for index2,k in enumerate(meal_plan_item_list[index].ingredient_id__unit__amount_list)]
-                        ic(numerator_amount_to_add_per_ingredient)
                         for index2,k in enumerate(numerator_amount_to_add_per_ingredient):
                             new_numerator_amount = meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] + numerator_amount_to_add_per_ingredient[index2] if meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] + numerator_amount_to_add_per_ingredient[index2] >= 1 else 1
                             j -= meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][2] * (new_numerator_amount - meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6]) / meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][7]
                             meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] = new_numerator_amount
-                        ic(sum([i[2]*i[6]/i[7] for i in meal_plan_item_list[index].ingredient_id__unit__amount_list]))
-                        ic(j)
                         previousj = j-1
                         while previousj != j:
                             previousj = j
                             for index2,k in enumerate(meal_plan_item_list[index].ingredient_id__unit__amount_list):
-                                ic(j)
                                 minimum_calorie_amount_for_current_ingredient = k[2]/k[7]
-                                ic(minimum_calorie_amount_for_current_ingredient)
-                                ic(meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6])
                                 if j > 0:
                                     if j >= minimum_calorie_amount_for_current_ingredient:
                                         j -= minimum_calorie_amount_for_current_ingredient
@@ -3839,31 +4275,12 @@ class Meal_Plan_Screen(MDScreen):
                                     if abs(j) >= minimum_calorie_amount_for_current_ingredient and meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] > 1:
                                         meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] -= 1
                                         j += minimum_calorie_amount_for_current_ingredient
-                                    
-                                # j = (j + minimum_calorie_amount_for_current_ingredient if j < 0 else j - minimum_calorie_amount_for_current_ingredient) if abs(j) - minimum_calorie_amount_for_current_ingredient >= 0 else j
-                                # if j != helperj:
-                                #     if helperj > j:
-                                #         meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] += 1
-                                #     elif helperj < j:
-                                #         meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] = meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] - 1 if meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] > 1 else 1
-                                asd = sum([i[2]*i[6]/i[7] for i in meal_plan_item_list[index].ingredient_id__unit__amount_list])
-                                ic(asd)
-                            # for index2,k in enumerate(meal_plan_item_list[index].ingredient_id__unit__amount_list):
-                            #     helperj = j
-                            #     ic(j)
-                            #     minimum_calorie_amount_for_current_ingredient = k[2]/k[7]
-                            #     ic(minimum_calorie_amount_for_current_ingredient)
-                            #     j = (j + minimum_calorie_amount_for_current_ingredient if j < 0 else j - minimum_calorie_amount_for_current_ingredient) if abs(j) - minimum_calorie_amount_for_current_ingredient >= 0 else j
-                            #     if j != helperj:
-                            #         if helperj > j:
-                            #             meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] += 1
-                            #         elif helperj < j:
-                            #             meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] = meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] - 1 if meal_plan_item_list[index].ingredient_id__unit__amount_list[index2][6] > 1 else 1
-                        ic(f"final j = {j}")
                         meal_plan_item_list[index].set_stats()
-                    self.adjusted = True
-                    self.adjust_calories_button_check_validity()
-                    self.display_page_title()
+                self.adjusted = True
+                self.adjust_calories_button_check_validity()
+                self.display_page_title()
+                self.generate_shopping_list()
+                MDApp.get_running_app().root.ids.shopping_list_screen.refresh_internal_list()
             else:
                 ic("you need to set your settings first")
         else:
@@ -3873,11 +4290,27 @@ class Meal_Plan_Screen(MDScreen):
         if not self.active_meal_plan_id:
             if self.ids.meal_plan.children:
                 ic(self.day_range-self.ids.meal_plan.page - 1)
-                self.ids.meal_plan_title.title = f"Day: {self.ids.meal_plan.page + 1} // Calories: {round(sum(i.meal_calories for i in self.meal_plan.children[self.day_range-self.ids.meal_plan.page - 1].children[0].children[::-1] if isinstance(i, Meal_Plan_Item)),2)}"
+                self.ids.current_meal_plan_display_name.text = f"Day: {self.ids.meal_plan.page + 1} // Calories: {round(sum(i.meal_calories for i in self.meal_plan.children[self.day_range-self.ids.meal_plan.page - 1].children[0].children[::-1] if isinstance(i, Meal_Plan_Item)),2)}"
         else:
             ic(self.day_range)
             ic(self.ids.meal_plan.page)
-            self.ids.meal_plan_title.title = f"{s.get(Meal_Plan,self.active_meal_plan_id).name}: // Day: {self.ids.meal_plan.page + 1} // Calories: {round(sum(i.meal_calories for i in self.meal_plan.children[self.day_range-self.ids.meal_plan.page - 1].children[0].children[::-1] if isinstance(i, Meal_Plan_Item)),2)}"
+            self.ids.current_meal_plan_display_name.text = f"{s.get(Meal_Plan,self.active_meal_plan_id).name}: // Day: {self.ids.meal_plan.page + 1} // Calories: {round(sum(i.meal_calories for i in self.meal_plan.children[self.day_range-self.ids.meal_plan.page - 1].children[0].children[::-1] if isinstance(i, Meal_Plan_Item)),2)}"
+    
+    def generate_shopping_list(self):
+        self.shopping_list = []
+        self.meal_id_and_ingredient_id__unit__amount_list = MDApp.get_running_app().root.ids.meal_plan_screen.meal_id_and_ingredient_id__unit__amount_list
+        for i in self.meal_id_and_ingredient_id__unit__amount_list: # i = list of one day
+            for j in i: # j = one meal
+                for k in j[1]: # k = One Ingredient
+                    # k[1] = unit /// k[2] = calories per 100g/piece /// k[3] = fats per 100g/piece /// k[4] = carbohydrates per 100g/piece /// k[5] = proteins per 100g/piece /// k[6] = amount numerate /// k[7] = amount denominator /// k[8] = Ingredient name /// k[9] = type
+                    ic(k)
+                    if not [True for l in self.shopping_list if l[0] == k[8]]:
+                        self.shopping_list.append([k[8],k[1],k[2],k[6],k[7],k[9],False,k[3],k[4],k[5]])
+                    else:
+                        self.shopping_list[next(index for index, l in enumerate(self.shopping_list) if l[0] == k[8])][3] += k[6]
+        ic(self.shopping_list)
+        MDApp.get_running_app().root.ids.shopping_list_screen.shopping_list = self.shopping_list
+
 class Save_Meal_Plan_Changes_Dialog(MDBoxLayout):
 
     def __init__(self, *args, **kwargs):
@@ -3890,17 +4323,23 @@ class Save_Meal_Plan_Changes_Dialog(MDBoxLayout):
         s = Session()
         s.query(Meal_Plan).filter(Meal_Plan.id == self.logic.active_meal_plan_id).update({
             Meal_Plan.breakfast : self.logic.breakfast,
+            Meal_Plan.breakfast_percentage : self.logic.breakfast_percentage,
             Meal_Plan.lunch : self.logic.lunch,
+            Meal_Plan.lunch_percentage : self.logic.lunch_percentage,
             Meal_Plan.snack : self.logic.snack,
+            Meal_Plan.snack_percentage : self.logic.snack_percentage,
             Meal_Plan.dinner : self.logic.dinner,
+            Meal_Plan.dinner_percentage : self.logic.dinner_percentage,
             Meal_Plan.day_range : self.logic.day_range,
             Meal_Plan.meal_id_and_ingredient_id__unit__amount_list : str(self.logic.meal_id_and_ingredient_id__unit__amount_list),
+            Meal_Plan.shopping_list : str(self.logic.shopping_list),
             Meal_Plan.adjusted : self.logic.adjusted
             }
         )
         s.commit()
         s.close()
         self.popup_base.dismiss()
+
 class Load_Meal_Plan_Dialog(MDBoxLayout):
 
     def __init__(self, *args, **kwargs):
@@ -3941,9 +4380,6 @@ class Load_Meal_Plan_Dialog(MDBoxLayout):
         c.load_meal_plan_dialog = self
         self.popup_select_meal_plan_options_dialog.open()
 
-# class ThreeLineValueListItem(ThreeLineListItem):
-#     meal_plan_id = NumericProperty(None)
-
 class Select_Meal_Plan_Options_Dialog(MDBoxLayout):
 
     def __init__(self, meal_plan_id, *args, **kwargs):
@@ -3979,7 +4415,6 @@ class Select_Meal_Plan_Options_Dialog(MDBoxLayout):
         s.close()
         self.popup_select_meal_plan_options_dialog.dismiss()
         self.popup_base.dismiss()
-
 
 class Delete_Meal_Plan_Dialog(MDBoxLayout):
 
@@ -4035,6 +4470,7 @@ class Save_Meal_Plan_Dialog(MDBoxLayout):
                 )
                 c.meal_plan_name = meal_plan_query.name
                 s.close()
+                c.logic = self.logic
                 c.popup_base = self.popup_base
                 c.breakfast = self.breakfast
                 c.lunch = self.lunch
@@ -4042,35 +4478,46 @@ class Save_Meal_Plan_Dialog(MDBoxLayout):
                 c.dinner = self.dinner
                 c.day_range = self.day_range
                 c.meal_id_and_ingredient_id__unit__amount_list = self.meal_id_and_ingredient_id__unit__amount_list
+                c.shopping_list = self.shopping_list
                 c.adjusted = self.adjusted
                 c.popup_meal_plan_already_exists_layer2 = self.popup_meal_plan_already_exists_layer2
                 self.popup_meal_plan_already_exists_layer2.open()
             else:
                 meal_plan_query.name = self.ids.meal_plan_name.text
-                meal_plan_query.breakfast = self.breakfast
-                meal_plan_query.lunch = self.lunch
-                meal_plan_query.snack = self.snack
-                meal_plan_query.dinner = self.dinner
-                meal_plan_query.day_range = self.day_range
-                meal_plan_query.meal_id_and_ingredient_id__unit__amount_list = str(self.meal_id_and_ingredient_id__unit__amount_list)
-                meal_plan_query.adjusted = self.adjusted
+                meal_plan_query.breakfast = self.logic.breakfast
+                meal_plan_query.breakfast_percentage = self.logic.breakfast_percentage
+                meal_plan_query.lunch = self.logic.lunch
+                meal_plan_query.lunch_percentage = self.logic.lunch_percentage
+                meal_plan_query.snack = self.logic.snack
+                meal_plan_query.dinner_percentage = self.logic.dinner_percentage
+                meal_plan_query.dinner = self.logic.dinner
+                meal_plan_query.snack_percentage = self.logic.snack_percentage
+                meal_plan_query.day_range = self.logic.day_range
+                meal_plan_query.meal_id_and_ingredient_id__unit__amount_list = str(self.logic.meal_id_and_ingredient_id__unit__amount_list)
+                meal_plan_query.shopping_list = str(self.logic.shopping_list)
+                meal_plan_query.adjusted = self.logic.adjusted
                 s.commit()
                 s.close()
         else:
             new_meal_plan = Meal_Plan(
                 name=self.ids.meal_plan_name.text,
-                breakfast=self.breakfast,
-                lunch=self.lunch,
-                snack=self.snack,
-                dinner=self.dinner,
-                day_range=self.day_range,
-                meal_id_and_ingredient_id__unit__amount_list=str(self.meal_id_and_ingredient_id__unit__amount_list),
-                adjusted=self.adjusted
+                breakfast=self.logic.breakfast,
+                breakfast_percentage=self.logic.breakfast_percentage,
+                lunch=self.logic.lunch,
+                lunch_percentage=self.logic.lunch_percentage,
+                snack=self.logic.snack,
+                dinner_percentage=self.logic.dinner_percentage,
+                dinner=self.logic.dinner,
+                snack_percentage=self.logic.snack_percentage,
+                day_range=self.logic.day_range,
+                meal_id_and_ingredient_id__unit__amount_list=str(self.logic.meal_id_and_ingredient_id__unit__amount_list),
+                shopping_list=str(self.logic.shopping_list),
+                adjusted=self.logic.adjusted
             )
             s.add(new_meal_plan)            
             s.commit()
             meal_plan_id = new_meal_plan.id
-            self.meal_plan_screen.active_meal_plan_id = meal_plan_id#
+            self.meal_plan_screen.active_meal_plan_id = meal_plan_id
             self.meal_plan_screen.display_page_title()
             s.query(Active).update({Active.meal_plan_id: meal_plan_id})
             s.commit()
@@ -4090,19 +4537,25 @@ class Meal_Plan_Already_Exists_Dialog(MDBoxLayout):
         s = Session()
         meal_plan_query = s.get(Meal_Plan,self.meal_plan_id)
         meal_plan_query.name = self.meal_plan_name
-        meal_plan_query.breakfast = self.breakfast
-        meal_plan_query.lunch = self.lunch
-        meal_plan_query.snack = self.snack
-        meal_plan_query.dinner = self.dinner
-        meal_plan_query.day_range = self.day_range
-        meal_plan_query.meal_id_and_ingredient_id__unit__amount_list = str(self.meal_id_and_ingredient_id__unit__amount_list)
-        meal_plan_query.adjusted = self.adjusted
+        meal_plan_query.breakfast = self.logic.breakfast
+        meal_plan_query.breakfast_percentage = self.logic.breakfast_percentage
+        meal_plan_query.lunch = self.logic.lunch
+        meal_plan_query.lunch_percentage = self.logic.lunch_percentage
+        meal_plan_query.snack = self.logic.snack
+        meal_plan_query.dinner_percentage = self.logic.dinner_percentage
+        meal_plan_query.dinner = self.logic.dinner
+        meal_plan_query.snack_percentage = self.logic.snack_percentage
+        meal_plan_query.day_range = self.logic.day_range
+        meal_plan_query.meal_id_and_ingredient_id__unit__amount_list = str(self.logic.meal_id_and_ingredient_id__unit__amount_list)
+        meal_plan_query.shopping_list = str(self.logic.shopping_list)
+        meal_plan_query.adjusted = self.logic.adjusted
         s.query(Active).update({Active.meal_plan_id: self.meal_plan_id})
         s.commit()
         s.close()
         self.popup_meal_plan_already_exists_layer2.dismiss()
         self.popup_base.dismiss()
-class  Meal_Plan_Settings_Dialog(MDBoxLayout):
+
+class Meal_Plan_Settings_Dialog(MDBoxLayout):
 
     def __init__(self, *args, **kwargs):
         super(Meal_Plan_Settings_Dialog,self).__init__(*args, **kwargs)
@@ -4110,6 +4563,189 @@ class  Meal_Plan_Settings_Dialog(MDBoxLayout):
     def cancel(self):
         self.popup_meal_plan_settings.dismiss()
     
+    def set_percentage_availability_all(self):
+        self.set_percentage_availability_breakfast()
+        self.set_percentage_availability_lunch()
+        self.set_percentage_availability_snack()
+        self.set_percentage_availability_dinner()
+
+    def set_initial_percentages(self):
+        active_number= sum([
+            1 for i in (
+                self.ids.breakfast.active,
+                self.ids.lunch.active,
+                self.ids.snack.active,
+                self.ids.dinner.active) if i])
+        self.ids.breakfast_percent_label.percentage = int(100 / active_number if active_number > 0 else 1) if self.ids.breakfast.active else 0
+        self.ids.lunch_percent_label.percentage = int(100 / active_number if active_number > 0 else 1) if self.ids.lunch.active else 0
+        self.ids.snack_percent_label.percentage = int(100 / active_number if active_number > 0 else 1) if self.ids.snack.active else 0
+        self.ids.dinner_percent_label.percentage = int(100 / active_number if active_number > 0 else 1) if self.ids.dinner.active else 0
+
+    def decrement_breakfast_percentage(self):
+        if self.ids.breakfast_percent_label.percentage > 10:
+            if self.ids.lunch.active:
+                self.ids.breakfast_percent_label.percentage -= 1
+                self.ids.lunch_percent_label.percentage += 1
+            elif self.ids.snack.active:
+                self.ids.breakfast_percent_label.percentage -= 1
+                self.ids.snack_percent_label.percentage += 1
+            elif self.ids.dinner.active:
+                self.ids.breakfast_percent_label.percentage -= 1
+                self.ids.dinner_percent_label.percentage += 1
+
+    def set_min_breakfast(self):
+        while True:
+            old_percentage = self.ids.breakfast_percent_label.percentage
+            self.decrement_breakfast_percentage()
+            if old_percentage == self.ids.breakfast_percent_label.percentage:
+                break
+            old_percentage = self.ids.breakfast_percent_label.percentage
+
+    def increment_breakfast_percentage(self):
+        if self.ids.breakfast_percent_label.percentage < 100:
+            if self.ids.lunch.active and self.ids.lunch_percent_label.percentage > 10:
+                self.ids.breakfast_percent_label.percentage += 1
+                self.ids.lunch_percent_label.percentage -= 1
+            elif self.ids.snack.active and self.ids.snack_percent_label.percentage > 10:
+                self.ids.breakfast_percent_label.percentage += 1
+                self.ids.snack_percent_label.percentage -= 1
+            elif self.ids.dinner.active and self.ids.dinner_percent_label.percentage > 10:
+                self.ids.breakfast_percent_label.percentage += 1
+                self.ids.dinner_percent_label.percentage -= 1
+    
+    def set_max_breakfast(self):
+        while True:
+            old_percentage = self.ids.breakfast_percent_label.percentage
+            self.increment_breakfast_percentage()
+            if old_percentage == self.ids.breakfast_percent_label.percentage:
+                break
+            old_percentage = self.ids.breakfast_percent_label.percentage
+
+    def set_percentage_availability_breakfast(self):
+        if self.ids.breakfast.active:
+            self.ids.set_min_breakfast_button.disabled = False
+            self.ids.breakfast_percent_decrement_button.disabled = False
+            self.ids.breakfast_percent_label.text_color = (1,1,1,1)
+            self.ids.breakfast_percent_increment_button.disabled = False
+            self.ids.set_max_breakfast_button.disabled = False
+        else:
+            self.ids.set_min_breakfast_button.disabled = True
+            self.ids.breakfast_percent_decrement_button.disabled = True
+            self.ids.breakfast_percent_label.text_color = (1,1,1,.25)
+            self.ids.breakfast_percent_increment_button.disabled = True
+            self.ids.set_max_breakfast_button.disabled = True
+            self.ids.breakfast_percent_label.percentage = 0
+        self.set_initial_percentages()
+
+    def decrement_lunch_percentage(self):
+        if self.ids.lunch.active:
+            if self.ids.lunch_percent_label.percentage > 10:
+                if self.ids.snack.active:
+                    self.ids.snack_percent_label.percentage += 1
+                    self.ids.lunch_percent_label.percentage -= 1
+                elif self.ids.dinner.active:
+                    self.ids.dinner_percent_label.percentage += 1
+                    self.ids.lunch_percent_label.percentage -= 1
+    
+    def set_min_lunch(self):
+        while True:
+            old_percentage = self.ids.lunch_percent_label.percentage
+            self.decrement_lunch_percentage()
+            if old_percentage == self.ids.lunch_percent_label.percentage:
+                break
+            old_percentage = self.ids.lunch_percent_label.percentage
+
+    def increment_lunch_percentage(self):
+        if self.ids.lunch.active:
+            if self.ids.lunch_percent_label.percentage + self.ids.breakfast_percent_label.percentage < 100:
+                if self.ids.snack.active and self.ids.snack_percent_label.percentage > 10:
+                    self.ids.snack_percent_label.percentage -= 1
+                    self.ids.lunch_percent_label.percentage += 1
+                elif self.ids.dinner.active and self.ids.dinner_percent_label.percentage > 10:
+                    self.ids.dinner_percent_label.percentage -= 1
+                    self.ids.lunch_percent_label.percentage += 1
+
+    def set_max_lunch(self):
+        while True:
+            old_percentage = self.ids.lunch_percent_label.percentage
+            self.increment_lunch_percentage()
+            if old_percentage == self.ids.lunch_percent_label.percentage:
+                break
+            old_percentage = self.ids.lunch_percent_label.percentage
+
+    def set_percentage_availability_lunch(self):
+        if self.ids.lunch.active:
+            self.ids.set_min_lunch_button.disabled = False
+            self.ids.lunch_percent_decrement_button.disabled = False
+            self.ids.lunch_percent_label.text_color = (1,1,1,1)
+            self.ids.lunch_percent_increment_button.disabled = False
+            self.ids.set_max_lunch_button.disabled = False
+        else:
+            self.ids.set_min_lunch_button.disabled = True
+            self.ids.lunch_percent_decrement_button.disabled = True
+            self.ids.lunch_percent_label.text_color = (1,1,1,.25)
+            self.ids.lunch_percent_increment_button.disabled = True
+            self.ids.set_max_lunch_button.disabled = True
+            self.ids.lunch_percent_label.percentage = 0
+        self.set_initial_percentages()
+
+    def decrement_snack_percentage(self):
+        if self.ids.snack.active:
+            if self.ids.snack_percent_label.percentage > 10:
+                if self.ids.dinner.active:
+                    self.ids.dinner_percent_label.percentage += 1
+                    self.ids.snack_percent_label.percentage -= 1
+    
+    def set_min_snack(self):
+        while True:
+            old_percentage = self.ids.snack_percent_label.percentage
+            self.decrement_snack_percentage()
+            if old_percentage == self.ids.snack_percent_label.percentage:
+                break
+            old_percentage = self.ids.snack_percent_label.percentage
+
+    def increment_snack_percentage(self):
+        if self.ids.lunch_percent_label.percentage + self.ids.breakfast_percent_label.percentage + self.ids.snack_percent_label.percentage < 100:
+            if self.ids.dinner.active and self.ids.dinner_percent_label.percentage > 10:
+                self.ids.dinner_percent_label.percentage -= 1
+                self.ids.snack_percent_label.percentage += 1
+
+    def set_max_snack(self):
+        while True:
+            old_percentage = self.ids.snack_percent_label.percentage
+            self.increment_snack_percentage()
+            if old_percentage == self.ids.snack_percent_label.percentage:
+                break
+            old_percentage = self.ids.snack_percent_label.percentage
+
+    def set_percentage_availability_snack(self):
+        if self.ids.snack.active:
+            self.ids.set_min_snack_button.disabled = False
+            self.ids.snack_percent_decrement_button.disabled = False
+            self.ids.snack_percent_label.text_color = (1,1,1,1)
+            self.ids.snack_percent_increment_button.disabled = False
+            self.ids.set_max_snack_button.disabled = False
+        else:
+            self.ids.set_min_snack_button.disabled = True
+            self.ids.snack_percent_decrement_button.disabled = True
+            self.ids.snack_percent_label.text_color = (1,1,1,.25)
+            self.ids.snack_percent_increment_button.disabled = True
+            self.ids.set_max_snack_button.disabled = True
+            self.ids.snack_percent_label.percentage = 0
+        self.set_initial_percentages()
+
+    def set_percentage_availability_dinner(self):
+        if self.ids.dinner.active:
+            self.ids.dinner_percent_decrement_button.disabled = False
+            self.ids.dinner_percent_label.text_color = (1,1,1,1)
+            self.ids.dinner_percent_increment_button.disabled = False
+        else:
+            self.ids.dinner_percent_decrement_button.disabled = True
+            self.ids.dinner_percent_label.text_color = (1,1,1,.25)
+            self.ids.dinner_percent_increment_button.disabled = True
+            self.ids.dinner_percent_label.percentage = 0
+        self.set_initial_percentages()
+
     def check_apply_settings_button_validity(self):
         if any([self.ids.breakfast.active,self.ids.lunch.active,self.ids.dinner.active,self.ids.snack.active]):
             self.ids.apply_settings_button.disabled = False
@@ -4120,24 +4756,409 @@ class  Meal_Plan_Settings_Dialog(MDBoxLayout):
         if self.ids.day_range.number > 1:
             self.ids.day_range.number -= 1
             if self.ids.day_range.number == 1:
-                self.ids.decrement_button.disabled = True
+                self.ids.day_range_decrement_button.disabled = True
     
     def increment_day_range(self):
         self.ids.day_range.number += 1
-        self.ids.decrement_button.disabled = False
+        self.ids.day_range_decrement_button.disabled = False
 
     def save_settings(self):
         self.Meal_Plan_Screen.breakfast = self.ids.breakfast.active
+        self.Meal_Plan_Screen.breakfast_percentage = self.ids.breakfast_percent_label.percentage
         self.Meal_Plan_Screen.lunch = self.ids.lunch.active
+        self.Meal_Plan_Screen.lunch_percentage = self.ids.lunch_percent_label.percentage
         self.Meal_Plan_Screen.dinner = self.ids.dinner.active
+        self.Meal_Plan_Screen.dinner_percentage = self.ids.dinner_percent_label.percentage
         self.Meal_Plan_Screen.snack = self.ids.snack.active
+        self.Meal_Plan_Screen.snack_percentage = self.ids.snack_percent_label.percentage
         self.Meal_Plan_Screen.day_range = self.ids.day_range.number
         self.popup_meal_plan_settings.dismiss()
+
+class Shopping_List_Screen(MDScreen):
+
+    def __init__(self, *args, **kwargs):
+        super(Shopping_List_Screen, self).__init__(*args, **kwargs)
+        self.ing_icon_dict = {
+            "Meat":"food-steak",
+            "Fish":"fish",
+            "Grains / Bread":"bread-slice-outline",
+            "Dairy":"cheese",
+            "Vegetable":"carrot",
+            "Fruit":"food-apple-outline",
+            "Nuts / Seeds":"peanut",
+            "Oil / Fats":"bottle-tonic",
+            "Condiment":"soy-sauce",
+            "Spice":"shaker-outline"
+        }
+        self.ing_icon_color_dict = {
+            "All":(1,1,1,1),
+            "Meat":(.39,.24,.04,1),
+            "Fish":(1,.61,.39,1),
+            "Grains / Bread":(1,.67,.35,1),
+            "Dairy":(1,.78,.24,1),
+            "Vegetable":(1,.55,.1,1),
+            "Fruit":(.9,.16,0,1),
+            "Nuts / Seeds":(.78,.53,0,1),
+            "Oil / Fats":(.96,.75,0,1),
+            "Condiment":(.78,.69,.24,1),
+            "Spice":(.95,.95,.99,1)
+        }
+        self.shopping_list = eval(s.get(Meal_Plan,s.query(Active).first().meal_plan_id).shopping_list) if s.query(Active).first().meal_plan_id else []
+        self.sort_value = 5               # default value (sorts by type)
+        self.sort_order = True
+        self.filter_type = "All"
+        self.exclude_checked_items = False
+    
+    def transition_to_meal_plan_screen(self):
+        self.save_changes()
+        MDApp.get_running_app().root.ids.screen_manager.current = "Meal_Plan_Screen"
+        MDApp.get_running_app().root.ids.screen_manager.transition.direction = "right"
+        MDApp.get_running_app().root.load_active_profile()
+
+    def clear_shopping_list_list(self):
+        self.ids.shopping_list_list.clear_widgets()
+
+    def open_filter_menu(self):
+        c = Shopping_List_Filter_Dialog()
+        self.popup_shopping_list_filter = MDDialog(
+            title="Filter and Sort settings",
+            type="custom",
+            content_cls=c,
+            size_hint=(.9, None),
+            radius=[20, 7, 20, 7],
+            pos_hint={"center_x": .5, "center_y": .5}
+        )
+        c.logic = self
+        c.sort_value = self.sort_value # determines wether to sort by amount (3), calories (2), fats (7), carbohydrates (8) or proteins (9)
+        c.sort_order = self.sort_order # bool // False = ascending, True = descending
+        c.filter_type = self.filter_type # "Meat", "Fish", "Grains / Bread", "Dairy", "Vegetable", "Fruit", "Nuts / Seeds", "Oil / Fats", "Condiment", "Spice", "All"
+        c.exclude_checked_items = self.exclude_checked_items # bool // False = include checked items, True = exclude checked items
+        c.popup_shopping_list_filter = self.popup_shopping_list_filter
+        c.set_initial_settings()
+        self.popup_shopping_list_filter.open()
+    
+    def refresh_internal_list(self):
+        if self.filter_type == "All":
+            self.internal_list = list(filter(lambda x: x[6] == False or (x[6] == True and not self.exclude_checked_items), self.shopping_list))
+        else:
+            self.internal_list = list(filter(lambda x: (x[6] == False and x[5] == self.filter_type) or (x[6] == True and not self.exclude_checked_items and x[5] == self.filter_type), self.shopping_list))
+        self.internal_list = sorted(self.internal_list,key = lambda x: x[self.sort_value],reverse = self.sort_order)
+        self.display_shopping_list()
+
+    def display_shopping_list(self):
+        search = self.ids.ing_search.text
+        self.clear_shopping_list_list()
+        for i in [i for i in self.internal_list if search.lower() in i[0].lower()]:
+            Item = ThreeLineAvatarIconListItem(
+                text=i[0],
+                secondary_text=(f"{i[2]} kcals " if self.sort_value in [2,3,5] else f"{i[7]} grams of fat " if self.sort_value == 7 else f"{i[8]} grams of carbohydrates " if self.sort_value == 8 else f"{i[9]} grams of protein ") + f"per {'100' if i[1] =='gram' or i[1] =='ml' else ''} {i[1]}{'s' if i[1] == 'gram' or i[1] == 'ml' else ''}",
+                tertiary_text=f"{i[3]} {i[1]}{'s' if i[3] > 1 else ''}" if i[1] != "piece" else f"{i[3]} {i[1]}s" if i[4] == 1 else f"{int(i[3]/i[4])} {pretty(Rational(i[3]%i[4],i[4]),use_unicode=True)} {i[1]}s per {i[4]} pieces",
+                on_release=self.check_list_item
+            )
+            Item.add_widget(
+                MDBoxLayout(
+                    Widget(size_hint_x=15),
+                    IconRightWidget(
+                        icon="check" if i[6] else "close",
+                        theme_text_color="Custom",
+                        text_color=(0,1,0,1) if i[6] else (1,0,0,1),
+                        size_hint_x=2,
+                        pos_hint={"center_y":.5}
+                    ),
+                    orientation='horizontal',
+                    size_hint_x=None,
+                    width=MDApp.get_running_app().root.width*.95,
+                    pos_hint={"center_y": .5}
+                )
+            )
+            Item.add_widget(IconLeftWidget(
+                    icon=self.ing_icon_dict[i[5]],
+                    theme_text_color="Custom",
+                    text_color=self.ing_icon_color_dict[i[5]]
+                )
+            )
+            MDApp.get_running_app().root.ids.shopping_list_screen.ids.shopping_list_list.add_widget(Item)
+
+    def check_list_item(self, instance):
+        #ic(instance.text)                         # ingredient name
+        # checkbox active status
+        instance.children[0].children[0].icon = "check" if instance.children[0].children[0].icon == "close" else "close"
+        instance.children[0].children[0].text_color = (0,1,0,1) if instance.children[0].children[0].icon == "check" else (1,0,0,1)
+        self.shopping_list[next(index for index, i in enumerate(self.shopping_list) if i[0] == instance.text)][6] = True if instance.children[0].children[0].icon == "check" else False
+        ic(self.shopping_list)
+        ic(self.exclude_checked_items)
+        if self.exclude_checked_items:
+            self.ids.shopping_list_list.remove_widget(instance)
+    def save_changes(self): # function currently gets executed only when switching back to the meal plan screen
+        if MDApp.get_running_app().root.ids.meal_plan_screen.active_meal_plan_id: # ensures that there is a database entry for the mealplan the shoppinglist is associated with!
+            s.query(Meal_Plan).filter(Meal_Plan.id == MDApp.get_running_app().root.ids.meal_plan_screen.active_meal_plan_id).update({"shopping_list":str(self.shopping_list)})
+            s.commit()
+            s.close()
+
+class Shopping_List_Filter_Dialog(MDBoxLayout):
+
+    def __init__(self, *args, **kwargs):
+        super(Shopping_List_Filter_Dialog, self).__init__(*args, **kwargs)
+        self.sort_value = 5 # 5 corresponds to type by default
+        self.sort_order = True # corresponds to the sort reverse attribute (high to low, low to high) # what is what I havent determined yet
+        self.filter_type = "All"
+        self.exclude_checked_items = False # corresponds to wether or not checked items should be shown
+        self.ing_icon_dict = {
+            "All":"filter-variant",
+            "Meat":"food-steak",
+            "Fish":"fish",
+            "Grains / Bread":"bread-slice-outline",
+            "Dairy":"cheese",
+            "Vegetable":"carrot",
+            "Fruit":"food-apple-outline",
+            "Nuts / Seeds":"peanut",
+            "Oil / Fats":"bottle-tonic",
+            "Condiment":"soy-sauce",
+            "Spice":"shaker-outline"
+        }
+        self.ing_icon_color_dict = {
+            "All":(1,1,1,1),
+            "Meat":(.39,.24,.04,1),
+            "Fish":(1,.61,.39,1),
+            "Grains / Bread":(1,.67,.35,1),
+            "Dairy":(1,.78,.24,1),
+            "Vegetable":(1,.55,.1,1),
+            "Fruit":(.9,.16,0,1),
+            "Nuts / Seeds":(.78,.53,0,1),
+            "Oil / Fats":(.96,.75,0,1),
+            "Condiment":(.78,.69,.24,1),
+            "Spice":(.95,.95,.99,1)
+        }
+    
+    def set_initial_settings(self):
+        if self.sort_value == 3:
+            self.ids.sort_by_amount.active = True
+            self.ids.sort_by_amount_label.text_color = (1,1,1,1)
+        elif self.sort_value == 2:
+            self.ids.sort_by_calories.active = True
+            self.ids.sort_by_calories_label.text_color = (1,1,1,1)
+        elif self.sort_value == 7:
+            self.ids.sort_by_fats.active = True
+            self.ids.sort_by_fats_label.text_color = (1,1,1,1)
+        elif self.sort_value == 8:
+            self.ids.sort_by_carbohydrates.active = True
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,1)
+        elif self.sort_value == 9:
+            self.ids.sort_by_proteins.active = True
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,1)
+        if self.sort_order:
+            self.ids.sorting_direction.icon = "sort-descending"
+            self.ids.sort_order_label.text = "High to Low"
+        else:
+            self.ids.sorting_direction.icon = "sort-ascending"
+            self.ids.sort_order_label.text = "Low to High"
+        self.ids.ingredient_type_filter.icon = self.ing_icon_dict[self.filter_type]
+        self.ids.ingredient_type_filter.text_color = self.ing_icon_color_dict[self.filter_type]
+        self.ids.exclude_checked_items.active = self.exclude_checked_items
+
+    def cancel(self):
+        self.popup_shopping_list_filter.dismiss()
+
+    def check_amount(self,instance,value):
+        if value:
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_amount_label.text_color = (1,1,1,1)
+            self.sort_value = 3
+        else:
+            self.sort_value = 5
+            self.ids.sort_by_amount_label.text_color = (1,1,1,.25)
+
+    def check_calories(self,instance,value):
+        if value:
+            self.ids.sort_by_amount.active = False
+            self.ids.sort_by_amount_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_calories_label.text_color = (1,1,1,1)
+            self.sort_value = 2
+        else:
+            self.sort_value = 5
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+
+    def check_fats(self,instance,value):
+        if value:
+            self.ids.sort_by_amount.active = False
+            self.ids.sort_by_amount_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats_label.text_color = (1,1,1,1)
+            self.sort_value = 7
+        else:
+            self.sort_value = 5
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+    
+    def check_carbohydrates(self,instance,value):
+        if value:
+            self.ids.sort_by_amount.active = False
+            self.ids.sort_by_amount_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins.active = False
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,1)
+            self.sort_value = 8
+        else:
+            self.sort_value = 5
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+
+    def check_proteins(self,instance,value):
+        if value:
+            self.ids.sort_by_amount.active = False
+            self.ids.sort_by_amount_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_calories.active = False
+            self.ids.sort_by_calories_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_fats.active = False
+            self.ids.sort_by_fats_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_carbohydrates.active = False
+            self.ids.sort_by_carbohydrates_label.text_color = (1,1,1,.25)
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,1)
+            self.sort_value = 9
+        else:
+            self.sort_value = 5
+            self.ids.sort_by_proteins_label.text_color = (1,1,1,.25)
+
+    def set_sort_order(self):
+        self.ids.sorting_direction.icon = "sort-ascending" if self.ids.sorting_direction.icon == "sort-descending" else "sort-descending"
+        self.sort_order = False if self.ids.sorting_direction.icon == "sort-ascending" else True
+        self.ids.sort_order_label.text = "High to Low" if self.sort_order else "Low to High"
+
+    def open_filter_dropdown(self):
+        self.choices_filter = [
+            {
+                "viewclass": "OneLineAvatarIconListItem",
+                "text": "All",
+                "icon":"filter-variant",
+                "height": dp(56),
+                "on_release": lambda x="filter-variant",y="All": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineAvatarIconListItem",
+                "text": "Meat",
+                "icon": "food-steak",
+                "height": dp(56),
+                "on_release": lambda x="food-steak",y="Meat": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Fish",
+                "icon": "fish",
+                "height": dp(56),
+                "on_release": lambda x="fish",y="Fish": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Grains / Bread",
+                "icon": "bread-slice-outline",
+                "height": dp(56),
+                "on_release": lambda x="bread-slice-outline",y="Grains / Bread": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Dairy",
+                "icon": "cheese",
+                "height": dp(56),
+                "on_release": lambda x="cheese",y="Dairy": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Vegetable",
+                "icon": "carrot",
+                "height": dp(56),
+                "on_release": lambda x="carrot",y="Vegetable": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Fruit",
+                "icon": "food-apple-outline",
+                "height": dp(56),
+                "on_release": lambda x="food-apple-outline",y="Fruit": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Nuts / Seeds",
+                "icon": "peanut",
+                "height": dp(56),
+                "on_release": lambda x="peanut",y="Nuts / Seeds": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Oil / Fats",
+                "icon": "bottle-tonic",
+                "height": dp(56),
+                "on_release": lambda x="bottle-tonic",y="Oil / Fats": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Condiment",
+                "icon": "soy-sauce",
+                "height": dp(56),
+                "on_release": lambda x="soy-sauce",y="Condiment": self.set_filter_icon(x,y)
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Spice",
+                "icon": "shaker-outline",
+                "height": dp(56),
+                "on_release": lambda x="shaker-outline",y="Spice": self.set_filter_icon(x,y)
+            },
+        ]
+        self.menu_list_type = MDDropdownMenu(
+            caller=self.ids.ingredient_type_filter,
+            items=self.choices_filter,
+            position="auto",
+            width_mult=4
+        )
+        self.menu_list_type.open()
+
+    def set_filter_icon(self, icon, ing_type):
+        self.ids.ingredient_type_filter.icon = icon
+        self.ids.ingredient_type_filter.text_color = self.ing_icon_color_dict[ing_type]
+        self.filter_type = ing_type
+        self.menu_list_type.dismiss()
+
+    def check_checked_items(self, instance, value):
+        ic(value)
+        self.exclude_checked_items = value
+
+    def apply_filter(self):
+        ic("apply filter")
+        self.logic.sort_value = self.sort_value
+        self.logic.sort_order = self.sort_order
+        self.logic.filter_type = self.filter_type
+        self.logic.exclude_checked_items = self.exclude_checked_items
+        self.logic.refresh_internal_list()
+        self.popup_shopping_list_filter.dismiss()
+        ic(self.sort_order)
+        ic(self.sort_value)
+        ic(self.filter_type)
+        ic(self.exclude_checked_items)
 
 class Main_Logic(MDScreen):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(Main_Logic, self).__init__(*args, **kwargs)
         s = Session()
         if not s.query(Active).first():
             ic("initiate active profile")
@@ -4164,7 +5185,7 @@ class Main_Logic(MDScreen):
 
     def get_ingredients(self):
         # Populates the ingredient list with all ingredients in the database
-        MDApp.get_running_app().root.ids.screen_manager.get_screen("Ingredients_Screen").refresh_and_sort_all_ingredients_list()
+        MDApp.get_running_app().root.ids.screen_manager.get_screen("Ingredients_Screen").refresh_all_ingredients_list()
     def get_meals(self):
         # Populates the meal list with all meals in the database
         MDApp.get_running_app().root.ids.screen_manager.get_screen("Meals_Screen").refresh_internal_list()
@@ -4172,7 +5193,9 @@ class Main_Logic(MDScreen):
     
     def get_meal_plan(self):
         MDApp.get_running_app().root.ids.meal_plan_screen.display_meal_plan()
-
+        MDApp.get_running_app().root.ids.meal_plan_screen.erase_meal_plan_and_save_meal_plan_button_check_validity()
+        MDApp.get_running_app().root.ids.meal_plan_screen.adjust_calories_button_check_validity()
+        MDApp.get_running_app().root.ids.meal_plan_screen.set_page_icon_validity_status()
 class MainApp(MDApp):
     def build(self):
         self.theme_cls.theme_style = "Dark"

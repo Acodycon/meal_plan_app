@@ -19,6 +19,12 @@ class Custom_MDGridLayout(MDGridLayout):
         self.size_hint_y = None
         self.bind(minimum_height=self.setter('height'))
 
+class MDLabelPercentage(MDLabel):
+    percentage = NumericProperty(0)
+
+    def on_percentage(self, instance, value):
+        self.text = f"{value} %"
+
 class MDLabelNumber(MDLabel):
     number = NumericProperty(0)
 
